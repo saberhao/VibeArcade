@@ -512,6 +512,19 @@
             z-index: 200;
         }
         #confirm-overlay.show { display: flex; }
+
+        /* 统计条 */
+        #stats-bar {
+            position: absolute; bottom: 0; left: 0; right: 0;
+            padding: 6px 16px;
+            background: var(--bar-bg);
+            backdrop-filter: blur(8px);
+            font-size: 11px; color: var(--text-muted);
+            text-align: center; z-index: 5;
+            display: none;
+            transition: background 0.4s ease;
+        }
+        #stats-bar.show { display: block; }
         #confirm-box {
             background: var(--modal-bg);
             border: 1px solid var(--modal-border);
@@ -690,6 +703,9 @@
                 </div>
             </div>
         </div>
+
+        <!-- 统计条 -->
+        <div id="stats-bar"></div>
     </div>
 
     <script>
@@ -789,6 +805,7 @@
                     game.hintActive = false;
                     if (game.animFrame) { cancelAnimationFrame(game.animFrame); game.animFrame = null; }
                     document.getElementById('start-screen').style.display = 'flex';
+                    updateStatsBar();
                 });
             });
             document.getElementById('reset-btn').addEventListener('click', function() {
@@ -992,6 +1009,7 @@
             game.canContinue = false;
             game.hintActive = false;
             game.showEdgeOrder = false;
+            analytics.trackGame(game.playerCount, game.numPoints);
             document.getElementById('order-toggle-btn').classList.remove('active');
 
             game.players = [];
@@ -1008,6 +1026,7 @@
             updateHintBadge();
             if (game.animFrame) cancelAnimationFrame(game.animFrame);
             renderLoop();
+            updateStatsBar();
         }
 
         function restartGame() {
@@ -1057,6 +1076,12 @@
             msg.textContent = text;
             msg.classList.add('show');
             setTimeout(function() { msg.classList.remove('show'); }, 2000);
+        }
+
+        function updateStatsBar() {
+            var bar = document.getElementById('stats-bar');
+            bar.textContent = analytics.getSummary();
+            bar.classList.toggle('show', game.gameStarted);
         }
 
         function showTriangleNotification(x, y, text, color) {
@@ -1129,6 +1154,7 @@
                 }
                 var player = game.players[currentPlayerId];
                 player.score += newTriangles.length;
+                for (var ti = 0; ti < newTriangles.length; ti++) { analytics.trackTriangle(); }
 
                 showTriangleNotification(
                     (game.selectedPoint.x + clickedPoint.x) / 2,
@@ -1245,6 +1271,7 @@
             });
 
             document.getElementById('end-screen').classList.add('show');
+            updateStatsBar();
         }
 
         // ===== 设置界面 =====
@@ -1616,7 +1643,46 @@
             game.animFrame = requestAnimationFrame(renderLoop);
         }
 
+        // ===== 打点统计 =====
+        var analytics = {
+            data: null,
+            init: function() {
+                var saved = localStorage.getItem('vibearcade_stats');
+                this.data = saved ? JSON.parse(saved) : {
+                    totalVisits: 0,
+                    gamesPlayed: 0,
+                    trianglesFormed: 0,
+                    gamesByPlayers: { '2': 0, '3': 0, '4': 0 },
+                    gamesByPoints: {},
+                    lastVisit: null
+                };
+                this.data.totalVisits++;
+                this.data.lastVisit = new Date().toISOString();
+                this.save();
+            },
+            save: function() {
+                localStorage.setItem('vibearcade_stats', JSON.stringify(this.data));
+            },
+            trackGame: function(playerCount, pointCount) {
+                this.data.gamesPlayed++;
+                this.data.gamesByPlayers[String(playerCount)] = (this.data.gamesByPlayers[String(playerCount)] || 0) + 1;
+                this.data.gamesByPoints[String(pointCount)] = (this.data.gamesByPoints[String(pointCount)] || 0) + 1;
+                this.save();
+            },
+            trackTriangle: function() {
+                this.data.trianglesFormed++;
+                this.save();
+            },
+            getSummary: function() {
+                var d = this.data;
+                var topConfig = Object.entries(d.gamesByPoints).sort(function(a,b){ return b[1]-a[1]; })[0];
+                return '共访问 ' + d.totalVisits + ' 次 | 已玩 ' + d.gamesPlayed + ' 局 | 累计 ' + d.trianglesFormed + ' 个三角形' +
+                    (topConfig ? ' | 最爱 ' + topConfig[0] + ' 点' : '');
+            }
+        };
+
         // 启动
+        analytics.init();
         init();
     </script>
 </body>
