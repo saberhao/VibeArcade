@@ -157,6 +157,7 @@
             #start-screen h1 { font-size: 32px; }
             #start-screen p { font-size: 14px; margin-bottom: 20px; }
             .settings-panel { gap: 20px; flex-direction: column; align-items: center; margin-bottom: 20px; }
+            .setting-group { align-items: center; width: 100%; }
             .player-btn { width: 58px; height: 58px; font-size: 24px; border-radius: 12px; }
             .player-btn span { font-size: 10px; }
             .point-input { width: 70px; padding: 8px; font-size: 16px; }
@@ -513,18 +514,7 @@
         }
         #confirm-overlay.show { display: flex; }
 
-        /* 统计条 */
-        #stats-bar {
-            position: absolute; bottom: 0; left: 0; right: 0;
-            padding: 6px 16px;
-            background: var(--bar-bg);
-            backdrop-filter: blur(8px);
-            font-size: 11px; color: var(--text-muted);
-            text-align: center; z-index: 5;
-            display: none;
-            transition: background 0.4s ease;
-        }
-        #stats-bar.show { display: block; }
+
         #confirm-box {
             background: var(--modal-bg);
             border: 1px solid var(--modal-border);
@@ -704,8 +694,7 @@
             </div>
         </div>
 
-        <!-- 统计条 -->
-        <div id="stats-bar"></div>
+
     </div>
 
     <script>
@@ -805,7 +794,6 @@
                     game.hintActive = false;
                     if (game.animFrame) { cancelAnimationFrame(game.animFrame); game.animFrame = null; }
                     document.getElementById('start-screen').style.display = 'flex';
-                    updateStatsBar();
                 });
             });
             document.getElementById('reset-btn').addEventListener('click', function() {
@@ -1078,12 +1066,6 @@
             setTimeout(function() { msg.classList.remove('show'); }, 2000);
         }
 
-        function updateStatsBar() {
-            var bar = document.getElementById('stats-bar');
-            bar.textContent = analytics.getSummary();
-            bar.classList.toggle('show', game.gameStarted);
-        }
-
         function showTriangleNotification(x, y, text, color) {
             var el = document.createElement('div');
             el.className = 'triangle-notification';
@@ -1271,7 +1253,7 @@
             });
 
             document.getElementById('end-screen').classList.add('show');
-            updateStatsBar();
+            analytics.trackGameEnd();
         }
 
         // ===== 设置界面 =====
@@ -1491,16 +1473,13 @@
                 var ep2 = game.points[parseInt(parts[1])];
                 var eplayer = game.players[playerId];
 
-                ctx.strokeStyle = eplayer.color + (light ? 'dd' : 'cc');
-                ctx.lineWidth = 3;
+                ctx.strokeStyle = eplayer.color + (light ? 'dd' : 'ee');
+                ctx.lineWidth = 2.5;
                 ctx.lineCap = 'round';
-                ctx.shadowColor = eplayer.color;
-                ctx.shadowBlur = light ? 4 : 8;
                 ctx.beginPath();
                 ctx.moveTo(ep1.x, ep1.y);
                 ctx.lineTo(ep2.x, ep2.y);
                 ctx.stroke();
-                ctx.shadowBlur = 0;
                 ctx.lineCap = 'butt';
             });
 
@@ -1547,16 +1526,13 @@
                 for (var hpi in hintPoints) {
                     var tgtP = game.points[parseInt(hpi)];
                     ctx.strokeStyle = 'rgba(255,230,109,0.7)';
-                    ctx.lineWidth = 3;
+                    ctx.lineWidth = 2;
                     ctx.setLineDash([8, 5]);
-                    ctx.shadowColor = '#ffe66d';
-                    ctx.shadowBlur = 10;
                     ctx.beginPath();
                     ctx.moveTo(selP.x, selP.y);
                     ctx.lineTo(tgtP.x, tgtP.y);
                     ctx.stroke();
                     ctx.setLineDash([]);
-                    ctx.shadowBlur = 0;
                 }
             }
 
@@ -1585,65 +1561,80 @@
                 var isHov = hoveredPoint && hoveredPoint.id === p.id;
                 var isHint = hintPoints[p.id];
 
-                // 光晕
-                var glowColor;
-                if (isSel) {
-                    glowColor = light ? 'rgba(78,205,196,0.5)' : 'rgba(255,255,255,0.6)';
-                } else if (isHint) {
-                    glowColor = 'rgba(255,230,109,0.9)';
-                } else if (isHov) {
-                    glowColor = light ? 'rgba(78,205,196,0.3)' : 'rgba(255,255,255,0.4)';
-                } else {
-                    glowColor = light ? 'rgba(0,0,0,0.1)' : 'rgba(255,255,255,0.2)';
-                }
-
-                var glowR = isHint ? 55 : (isSel ? (mobile ? 42 : 35) : (mobile ? 36 : 30));
-                var grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, glowR);
-                grad.addColorStop(0, glowColor);
-                grad.addColorStop(1, light ? 'rgba(0,0,0,0)' : 'rgba(255,255,255,0)');
-                ctx.fillStyle = grad;
-                ctx.beginPath();
-                ctx.arc(p.x, p.y, glowR, 0, Math.PI * 2);
-                ctx.fill();
-
                 // 提示点脉动光环
                 if (isHint) {
                     var pulse = 0.5 + 0.5 * Math.sin(Date.now() / 300);
-                    var pulseR = 50 + pulse * 15;
-                    ctx.strokeStyle = 'rgba(255,230,109,' + (0.4 + pulse * 0.4) + ')';
-                    ctx.lineWidth = 3;
+                    var pulseR = (mobile ? 26 : 22) + pulse * 8;
+                    ctx.strokeStyle = 'rgba(255,230,109,' + (0.3 + pulse * 0.5) + ')';
+                    ctx.lineWidth = 2;
                     ctx.beginPath();
                     ctx.arc(p.x, p.y, pulseR, 0, Math.PI * 2);
                     ctx.stroke();
                 }
 
-                // 核心
-                var r = isHint ? 16 : (isSel || isHov ? (mobile ? 14 : 12) : (mobile ? 12 : 10));
-                var cg = ctx.createRadialGradient(p.x - 2, p.y - 2, 0, p.x, p.y, r);
-                if (isHint) {
-                    cg.addColorStop(0, '#ffffaa');
-                    cg.addColorStop(0.5, '#ffe66d');
-                    cg.addColorStop(1, '#e6c235');
-                } else if (isSel || isHov) {
-                    cg.addColorStop(0, '#ffffff');
-                    cg.addColorStop(1, light ? '#c0c0c0' : '#e0e0e0');
-                } else {
-                    cg.addColorStop(0, light ? '#ffffff' : '#f5f5f5');
-                    cg.addColorStop(1, light ? '#b0b0b0' : '#aaaaaa');
+                // 选中/悬浮 环形指示
+                if (isSel || isHov) {
+                    var ringR = (mobile ? 20 : 18);
+                    ctx.strokeStyle = isSel ? (light ? 'rgba(78,205,196,0.8)' : 'rgba(255,255,255,0.8)') : (light ? 'rgba(78,205,196,0.5)' : 'rgba(255,255,255,0.5)');
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, ringR, 0, Math.PI * 2);
+                    ctx.stroke();
                 }
-                ctx.fillStyle = cg;
-                ctx.shadowColor = isHint ? '#ffe66d' : (light ? 'rgba(0,0,0,0.3)' : '#ffffff');
-                ctx.shadowBlur = isHint ? 25 : (isSel || isHov ? 15 : 8);
+
+                // 核心圆点
+                var r = isHint ? 9 : (mobile ? 8 : 7);
+                if (isHint) {
+                    ctx.fillStyle = '#ffe66d';
+                } else if (isSel) {
+                    ctx.fillStyle = light ? '#3ba89e' : '#ffffff';
+                } else if (isHov) {
+                    ctx.fillStyle = light ? '#555555' : '#dddddd';
+                } else {
+                    ctx.fillStyle = light ? '#888888' : '#cccccc';
+                }
+
+                ctx.shadowColor = isHint ? 'rgba(255,230,109,0.6)' : (isSel ? 'rgba(78,205,196,0.4)' : 'rgba(0,0,0,0)');
+                ctx.shadowBlur = isHint ? 8 : (isSel ? 6 : 0);
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
                 ctx.fill();
                 ctx.shadowBlur = 0;
+
+                // 内高光
+                if (r >= 7) {
+                    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                    ctx.beginPath();
+                    ctx.arc(p.x - r * 0.2, p.y - r * 0.25, r * 0.4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
             }
 
             game.animFrame = requestAnimationFrame(renderLoop);
         }
 
         // ===== 打点统计 =====
+
+        // 生成/读取唯一用户 ID
+        function getUserId() {
+            var id = localStorage.getItem('vibe_uid');
+            if (!id) {
+                id = 'u_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+                localStorage.setItem('vibe_uid', id);
+            }
+            return id;
+        }
+
+        // 服务端打点（EdgeOne KV）
+        function serverTrack(event) {
+            try {
+                navigator.sendBeacon('/api/track', JSON.stringify({ userId: getUserId(), event: event }));
+            } catch (e) {
+                // fallback: 静默失败
+            }
+        }
+
+        // 本地统计（离线补充）
         var analytics = {
             data: null,
             init: function() {
@@ -1659,6 +1650,8 @@
                 this.data.totalVisits++;
                 this.data.lastVisit = new Date().toISOString();
                 this.save();
+                // 上报服务端
+                serverTrack('visit');
             },
             save: function() {
                 localStorage.setItem('vibearcade_stats', JSON.stringify(this.data));
@@ -1668,10 +1661,15 @@
                 this.data.gamesByPlayers[String(playerCount)] = (this.data.gamesByPlayers[String(playerCount)] || 0) + 1;
                 this.data.gamesByPoints[String(pointCount)] = (this.data.gamesByPoints[String(pointCount)] || 0) + 1;
                 this.save();
+                serverTrack('game_start');
             },
             trackTriangle: function() {
                 this.data.trianglesFormed++;
                 this.save();
+                serverTrack('triangle_formed');
+            },
+            trackGameEnd: function() {
+                serverTrack('game_end');
             },
             getSummary: function() {
                 var d = this.data;
