@@ -1,0 +1,1702 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VibeArcade - 点连三角形</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
+
+        /* ===== 主题变量 ===== */
+        :root {
+            --bg-gradient-1: #1a1a2e;
+            --bg-gradient-2: #16213e;
+            --bg-gradient-3: #0f3460;
+            --text-primary: #fff;
+            --text-secondary: #aaa;
+            --text-muted: #888;
+            --text-dim: #bbb;
+            --text-rules: #ccc;
+            --overlay-bg: rgba(0,0,0,0.85);
+            --modal-bg: rgba(30,30,60,0.95);
+            --modal-border: rgba(255,255,255,0.15);
+            --bar-bg: rgba(0,0,0,0.4);
+            --btn-bg: rgba(255,255,255,0.1);
+            --btn-border: rgba(255,255,255,0.2);
+            --btn-hover: rgba(255,255,255,0.2);
+            --input-bg: rgba(255,255,255,0.1);
+            --input-border: rgba(255,255,255,0.2);
+            --input-focus: #4ecdc4;
+            --item-bg: rgba(255,255,255,0.08);
+            --item-border: rgba(255,255,255,0.1);
+            --score-bg: rgba(255,255,255,0.1);
+            --message-bg: rgba(0,0,0,0.6);
+            --canvas-bg: #1a1a2e;
+            --grid-color: rgba(255,255,255,0.03);
+            --point-glow-default: rgba(255,255,255,0.2);
+            --point-core-light: #f5f5f5;
+            --point-core-dark: #aaaaaa;
+            --point-sel-glow: rgba(255,255,255,0.6);
+            --point-hov-glow: rgba(255,255,255,0.4);
+            --order-current-border: rgba(78,205,196,0.5);
+            --order-current-bg: rgba(78,205,196,0.1);
+            --warning-color: #ff6b6b;
+            --accent: #4ecdc4;
+        }
+
+        [data-theme="light"] {
+            --bg-gradient-1: #e8ecf1;
+            --bg-gradient-2: #d5dde8;
+            --bg-gradient-3: #c0cde0;
+            --text-primary: #1a1a2e;
+            --text-secondary: #555;
+            --text-muted: #777;
+            --text-dim: #444;
+            --text-rules: #333;
+            --overlay-bg: rgba(230,235,242,0.92);
+            --modal-bg: rgba(255,255,255,0.96);
+            --modal-border: rgba(0,0,0,0.12);
+            --bar-bg: rgba(255,255,255,0.75);
+            --btn-bg: rgba(0,0,0,0.06);
+            --btn-border: rgba(0,0,0,0.12);
+            --btn-hover: rgba(0,0,0,0.1);
+            --input-bg: rgba(0,0,0,0.05);
+            --input-border: rgba(0,0,0,0.15);
+            --input-focus: #4ecdc4;
+            --item-bg: rgba(0,0,0,0.04);
+            --item-border: rgba(0,0,0,0.08);
+            --score-bg: rgba(0,0,0,0.06);
+            --message-bg: rgba(255,255,255,0.9);
+            --canvas-bg: #e8ecf1;
+            --grid-color: rgba(0,0,0,0.04);
+            --point-glow-default: rgba(0,0,0,0.1);
+            --point-core-light: #ffffff;
+            --point-core-dark: #b0b0b0;
+            --point-sel-glow: rgba(78,205,196,0.5);
+            --point-hov-glow: rgba(78,205,196,0.3);
+            --order-current-border: rgba(78,205,196,0.6);
+            --order-current-bg: rgba(78,205,196,0.08);
+            --warning-color: #e53e3e;
+            --accent: #3ba89e;
+        }
+
+        body {
+            font-family: -apple-system, 'Segoe UI', sans-serif;
+            background: linear-gradient(135deg, var(--bg-gradient-1) 0%, var(--bg-gradient-2) 50%, var(--bg-gradient-3) 100%);
+            min-height: 100vh;
+            overflow: hidden;
+            color: var(--text-primary);
+            transition: background 0.4s ease, color 0.4s ease;
+        }
+
+        #game-container { position: relative; width: 100vw; height: 100vh; }
+        #game-canvas { display: block; cursor: pointer; }
+
+        /* 顶部状态栏 */
+        #status-bar {
+            position: absolute; top: 0; left: 0; right: 0;
+            padding: 15px 20px;
+            background: var(--bar-bg);
+            backdrop-filter: blur(10px);
+            display: flex; justify-content: space-between; align-items: center;
+            z-index: 10;
+            transition: background 0.4s ease;
+        }
+
+        .player-info { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+
+        .player-badge {
+            display: flex; align-items: center; gap: 6px;
+            padding: 8px 14px; border-radius: 20px;
+            background: var(--btn-bg);
+            transition: all 0.3s ease;
+        }
+        .player-badge.active { transform: scale(1.05); box-shadow: 0 0 20px currentColor; }
+
+        .player-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+        .player-name { font-weight: 700; font-size: 13px; white-space: nowrap; }
+        .player-score { font-size: 17px; font-weight: 700; min-width: 24px; text-align: center; }
+        .player-hints {
+            font-size: 11px; color: #ffe66d; display: flex; align-items: center; gap: 2px;
+        }
+
+        .status-right { display: flex; align-items: center; gap: 10px; }
+        #turn-indicator { font-size: 14px; color: var(--text-secondary); white-space: nowrap; }
+
+        /* ===== 移动端适配 ===== */
+        @media (max-width: 768px) {
+            #status-bar {
+                padding: 8px 12px;
+                flex-wrap: wrap;
+                gap: 6px;
+            }
+            .player-info {
+                gap: 6px;
+                width: 100%;
+                justify-content: center;
+            }
+            .player-badge {
+                padding: 5px 10px;
+                border-radius: 16px;
+            }
+            .player-dot { width: 10px; height: 10px; }
+            .player-name { font-size: 11px; }
+            .player-score { font-size: 14px; min-width: 18px; }
+            .player-hints { font-size: 9px; }
+            .status-right {
+                width: 100%;
+                justify-content: center;
+                gap: 8px;
+            }
+            #turn-indicator { font-size: 12px; }
+            .icon-btn { width: 36px; height: 36px; font-size: 17px; }
+            #hint-btn .hint-count { width: 15px; height: 15px; font-size: 9px; top: -3px; right: -3px; }
+
+            /* 开始界面 */
+            #start-screen h1 { font-size: 32px; }
+            #start-screen p { font-size: 14px; margin-bottom: 20px; }
+            .settings-panel { gap: 20px; flex-direction: column; align-items: center; margin-bottom: 20px; }
+            .setting-group { align-items: center; width: 100%; }
+            .player-btn { width: 58px; height: 58px; font-size: 24px; border-radius: 12px; }
+            .player-btn span { font-size: 10px; }
+            .point-input { width: 70px; padding: 8px; font-size: 16px; }
+            .start-buttons { flex-direction: column; gap: 10px; width: 80%; max-width: 280px; }
+            #start-btn { padding: 14px 40px; font-size: 18px; width: 100%; }
+            #rules-btn { padding: 12px 24px; font-size: 15px; width: 100%; }
+            .start-theme-btn { margin-top: 14px; padding: 7px 16px; font-size: 13px; }
+
+            /* 弹窗 */
+            .modal-box {
+                min-width: auto;
+                max-width: 92vw;
+                padding: 20px 18px;
+                border-radius: 16px;
+                margin: 10px;
+            }
+            .modal-box h2 { font-size: 22px; }
+            .rules-content h3 { font-size: 14px; }
+            .rules-content p, .rules-content li { font-size: 13px; }
+            .modal-close-btn { padding: 9px 28px; font-size: 14px; }
+
+            /* 设置 */
+            .setting-section h3 { font-size: 14px; }
+            .setting-row label { font-size: 13px; min-width: 65px; }
+            .settings-input { width: 60px; font-size: 14px; padding: 6px 8px; }
+            .order-item { padding: 6px 10px; gap: 8px; }
+            .order-name { font-size: 13px; }
+            .order-btn { width: 26px; height: 26px; font-size: 12px; }
+            .settings-cancel-btn, .settings-apply-btn { padding: 9px 24px; font-size: 14px; }
+
+            /* 结束界面 */
+            #end-screen h2 { font-size: 28px; }
+            .winner-name { font-size: 32px; }
+            .score-row { padding: 10px 18px; min-width: 180px; }
+            .score-rank { font-size: 17px; }
+            .score-team { font-size: 15px; }
+            .score-value { font-size: 20px; }
+            #restart-btn { padding: 14px 40px; font-size: 18px; }
+
+            /* 消息 */
+            #message { top: 70px; font-size: 14px; padding: 8px 18px; }
+
+            /* 确认弹窗 */
+            #confirm-box { padding: 20px 18px; max-width: 300px; }
+            #confirm-box .confirm-icon { font-size: 30px; }
+            #confirm-box .confirm-text { font-size: 14px; }
+            .confirm-cancel-btn, .confirm-ok-btn { padding: 9px 22px; font-size: 14px; }
+        }
+
+        @media (max-width: 400px) {
+            .player-badge { padding: 4px 8px; gap: 4px; }
+            .player-name { font-size: 10px; }
+            .player-score { font-size: 13px; }
+            .icon-btn { width: 32px; height: 32px; font-size: 15px; }
+            #start-screen h1 { font-size: 26px; }
+            .player-btn { width: 50px; height: 50px; font-size: 20px; }
+        }
+
+        /* 图标按钮 */
+        .icon-btn {
+            width: 40px; height: 40px; border-radius: 50%;
+            background: var(--btn-bg); border: 1px solid var(--btn-border);
+            color: var(--text-primary); font-size: 20px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.3s ease; user-select: none;
+        }
+        .icon-btn:hover { background: var(--btn-hover); }
+        #settings-btn:hover { transform: rotate(90deg); }
+
+        /* 主题切换按钮 */
+        #theme-btn {
+            background: var(--btn-bg);
+            border-color: var(--btn-border);
+            font-size: 18px;
+        }
+        #theme-btn:hover { background: var(--btn-hover); }
+
+        /* 提示按钮 */
+        #hint-btn {
+            position: relative;
+            background: rgba(255,200,50,0.15);
+            border-color: rgba(255,200,50,0.3);
+        }
+        #hint-btn:hover { background: rgba(255,200,50,0.3); }
+        #hint-btn.active {
+            background: rgba(255,200,50,0.4);
+            box-shadow: 0 0 20px rgba(255,200,50,0.5);
+        }
+        #hint-btn.disabled { opacity: 0.3; cursor: not-allowed; }
+        #hint-btn .hint-count {
+            position: absolute; top: -4px; right: -4px;
+            background: #ffc832; color: #1a1a2e;
+            font-size: 10px; font-weight: 700;
+            width: 18px; height: 18px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+        }
+
+        /* 连线顺序按钮 */
+        #order-toggle-btn {
+            position: relative;
+            background: rgba(78,205,196,0.15);
+            border-color: rgba(78,205,196,0.3);
+            font-size: 16px;
+        }
+        #order-toggle-btn:hover { background: rgba(78,205,196,0.3); }
+        #order-toggle-btn.active {
+            background: rgba(78,205,196,0.4);
+            box-shadow: 0 0 20px rgba(78,205,196,0.5);
+        }
+
+        /* 开始界面 */
+        #start-screen {
+            position: absolute; inset: 0;
+            background: var(--overlay-bg);
+            backdrop-filter: blur(5px);
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 100;
+            transition: background 0.4s ease;
+        }
+
+        #start-screen h1 {
+            font-size: 48px; margin-bottom: 10px;
+            background: linear-gradient(135deg, #ff6b6b, #4ecdc4, #ffe66d);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        #start-screen p { color: var(--text-muted); margin-bottom: 30px; font-size: 16px; }
+
+        .start-buttons { display: flex; gap: 15px; align-items: center; }
+        #start-btn {
+            padding: 16px 48px; font-size: 20px; font-weight: 700;
+            border: none; border-radius: 30px;
+            background: linear-gradient(135deg, #ff6b6b, #ee5a5a);
+            color: #fff; cursor: pointer; transition: all 0.3s ease;
+        }
+        #start-btn:hover { transform: scale(1.05); box-shadow: 0 10px 40px rgba(255,107,107,0.4); }
+
+        #rules-btn {
+            padding: 16px 28px; font-size: 16px; font-weight: 600;
+            border: 1px solid var(--btn-border); border-radius: 30px;
+            background: var(--btn-bg); color: var(--text-dim);
+            cursor: pointer; transition: all 0.3s ease;
+        }
+        #rules-btn:hover { background: var(--btn-hover); color: var(--text-primary); }
+
+        /* 开始界面主题按钮 */
+        .start-theme-btn {
+            margin-top: 20px;
+            padding: 8px 20px; font-size: 14px; font-weight: 600;
+            border: 1px solid var(--btn-border); border-radius: 20px;
+            background: var(--btn-bg); color: var(--text-dim);
+            cursor: pointer; transition: all 0.3s ease;
+        }
+        .start-theme-btn:hover { background: var(--btn-hover); }
+
+        .settings-panel { display: flex; gap: 40px; margin-bottom: 30px; align-items: flex-end; }
+        .setting-group { display: flex; flex-direction: column; align-items: center; gap: 10px; }
+        .setting-label { font-size: 14px; color: var(--text-muted); }
+
+        .player-select { display: flex; gap: 15px; }
+
+        .player-btn {
+            width: 70px; height: 70px;
+            border: 2px solid var(--btn-border); border-radius: 16px;
+            background: var(--btn-bg); color: var(--text-primary);
+            font-size: 28px; font-weight: 700; cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+        }
+        .player-btn:hover { transform: translateY(-3px); border-color: #4ecdc4; background: rgba(78,205,196,0.2); }
+        .player-btn.selected { border-color: #4ecdc4; background: rgba(78,205,196,0.3); box-shadow: 0 0 20px rgba(78,205,196,0.4); }
+        .player-btn span { display: block; font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+        .point-input {
+            width: 80px; padding: 10px;
+            border: 2px solid var(--input-border); border-radius: 10px;
+            background: var(--input-bg); color: var(--text-primary);
+            font-size: 18px; text-align: center;
+        }
+        .point-input:focus { outline: none; border-color: var(--input-focus); }
+
+        /* 结束界面 */
+        #end-screen {
+            position: absolute; inset: 0;
+            background: var(--overlay-bg);
+            backdrop-filter: blur(5px);
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 100;
+            transition: background 0.4s ease;
+        }
+        #end-screen.show { display: flex; }
+        #end-screen h2 { font-size: 36px; margin-bottom: 30px; }
+        .winner-name { font-size: 42px; font-weight: 700; margin-bottom: 20px; }
+
+        .scores-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 30px; }
+        .score-row {
+            display: flex; align-items: center; gap: 15px;
+            padding: 12px 24px; background: var(--score-bg); border-radius: 12px;
+            min-width: 220px;
+        }
+        .score-row.winner { background: rgba(255,215,0,0.15); border: 2px solid rgba(255,215,0,0.5); }
+        .score-rank { font-size: 20px; font-weight: 700; min-width: 30px; }
+        .score-team { font-size: 18px; font-weight: 600; }
+        .score-value { font-size: 24px; font-weight: 700; margin-left: auto; }
+
+        #restart-btn {
+            padding: 16px 48px; font-size: 20px; font-weight: 700;
+            border: none; border-radius: 30px;
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            color: #fff; cursor: pointer; transition: all 0.3s ease;
+        }
+        #restart-btn:hover { transform: scale(1.05); box-shadow: 0 10px 40px rgba(78,205,196,0.4); }
+
+        /* 通用弹窗遮罩 */
+        .modal-overlay {
+            position: absolute; inset: 0;
+            background: var(--overlay-bg);
+            backdrop-filter: blur(5px);
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 100;
+            transition: background 0.4s ease;
+        }
+        .modal-overlay.show { display: flex; }
+
+        .modal-box {
+            background: var(--modal-bg);
+            border: 1px solid var(--modal-border);
+            border-radius: 20px;
+            padding: 30px 40px;
+            min-width: 420px;
+            max-width: 520px;
+            max-height: 80vh;
+            overflow-y: auto;
+            transition: background 0.4s ease, border-color 0.4s ease;
+        }
+
+        .modal-box h2 {
+            font-size: 28px; margin-bottom: 20px; text-align: center;
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+
+        /* 游戏说明 */
+        .rules-content { line-height: 1.8; }
+        .rules-content h3 { color: #4ecdc4; font-size: 16px; margin: 16px 0 8px; }
+        .rules-content h3:first-child { margin-top: 0; }
+        .rules-content p { color: var(--text-rules); font-size: 14px; margin-bottom: 6px; }
+        .rules-content ul { color: var(--text-dim); font-size: 14px; padding-left: 20px; margin-bottom: 8px; }
+        .rules-content li { margin-bottom: 4px; }
+
+        .modal-close-btn {
+            display: block; margin: 20px auto 0;
+            padding: 10px 36px; font-size: 16px; font-weight: 600;
+            border: none; border-radius: 20px;
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            color: #fff; cursor: pointer; transition: all 0.3s ease;
+        }
+        .modal-close-btn:hover { transform: scale(1.03); box-shadow: 0 5px 20px rgba(78,205,196,0.3); }
+
+        /* 设置界面 */
+        .setting-section {
+            margin-bottom: 24px;
+            padding-bottom: 24px;
+            border-bottom: 1px solid var(--item-border);
+        }
+        .setting-section:last-of-type { border-bottom: none; margin-bottom: 20px; padding-bottom: 0; }
+        .setting-section h3 { font-size: 16px; color: #4ecdc4; margin-bottom: 12px; }
+
+        .setting-row {
+            display: flex; align-items: center; gap: 12px; margin-bottom: 10px;
+        }
+        .setting-row label { font-size: 14px; color: var(--text-dim); min-width: 80px; }
+
+        .settings-input {
+            width: 70px; padding: 8px 10px;
+            border: 1px solid var(--input-border); border-radius: 8px;
+            background: var(--input-bg); color: var(--text-primary);
+            font-size: 16px; text-align: center;
+        }
+        .settings-input:focus { outline: none; border-color: var(--input-focus); }
+
+        .warning-text { font-size: 12px; color: var(--warning-color); margin-top: 6px; }
+
+        /* 玩家顺序 */
+        .order-list { display: flex; flex-direction: column; gap: 8px; }
+
+        .order-item {
+            display: flex; align-items: center; gap: 10px;
+            padding: 8px 12px; background: var(--item-bg);
+            border-radius: 10px; border: 1px solid var(--item-border);
+        }
+        .order-item.current { border-color: var(--order-current-border); background: var(--order-current-bg); }
+
+        .order-color { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+        .order-name { font-size: 14px; flex: 1; }
+        .order-num { font-size: 12px; color: var(--text-muted); min-width: 20px; text-align: center; }
+
+        .order-btn {
+            width: 28px; height: 28px; border-radius: 6px;
+            background: var(--btn-bg); border: 1px solid var(--btn-border);
+            color: var(--text-primary); font-size: 14px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .order-btn:hover { background: var(--btn-hover); }
+        .order-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .settings-actions { display: flex; gap: 15px; justify-content: center; margin-top: 10px; }
+
+        .settings-cancel-btn, .settings-apply-btn {
+            padding: 10px 30px; font-size: 16px; font-weight: 600;
+            border: none; border-radius: 20px; cursor: pointer;
+        }
+        .settings-cancel-btn {
+            background: var(--btn-bg); color: var(--text-dim);
+            border: 1px solid var(--btn-border);
+        }
+        .settings-cancel-btn:hover { background: var(--btn-hover); }
+        .settings-apply-btn {
+            background: linear-gradient(135deg, #4ecdc4, #44a08d); color: #fff;
+        }
+        .settings-apply-btn:hover { transform: scale(1.03); box-shadow: 0 5px 20px rgba(78,205,196,0.3); }
+
+        /* 消息提示 */
+        #message {
+            position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
+            padding: 10px 24px; background: var(--message-bg); border-radius: 20px;
+            font-size: 16px; opacity: 0; transition: opacity 0.3s ease;
+            pointer-events: none; z-index: 20;
+            color: var(--text-primary);
+        }
+        #message.show { opacity: 1; }
+
+        /* 首页/重置按钮样式 */
+        #home-btn {
+            background: rgba(255,107,107,0.15);
+            border-color: rgba(255,107,107,0.3);
+            font-size: 17px;
+        }
+        #home-btn:hover { background: rgba(255,107,107,0.3); }
+
+        #lobby-btn {
+            background: rgba(78,205,196,0.15);
+            border-color: rgba(78,205,196,0.3);
+            font-size: 17px;
+        }
+        #lobby-btn:hover { background: rgba(78,205,196,0.3); }
+
+        #reset-btn {
+            background: rgba(255,165,0,0.15);
+            border-color: rgba(255,165,0,0.3);
+            font-size: 16px;
+        }
+        #reset-btn:hover { background: rgba(255,165,0,0.3); }
+
+        /* 确认弹窗 */
+        #confirm-overlay {
+            position: absolute; inset: 0;
+            background: var(--overlay-bg);
+            backdrop-filter: blur(5px);
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 200;
+        }
+        #confirm-overlay.show { display: flex; }
+
+
+        #confirm-box {
+            background: var(--modal-bg);
+            border: 1px solid var(--modal-border);
+            border-radius: 16px;
+            padding: 24px 32px;
+            max-width: 360px;
+            text-align: center;
+            transition: background 0.4s ease, border-color 0.4s ease;
+        }
+        #confirm-box .confirm-icon { font-size: 36px; margin-bottom: 12px; }
+        #confirm-box .confirm-text { font-size: 16px; color: var(--text-primary); margin-bottom: 20px; line-height: 1.6; }
+        .confirm-actions { display: flex; gap: 12px; justify-content: center; }
+        .confirm-cancel-btn, .confirm-ok-btn {
+            padding: 10px 28px; font-size: 15px; font-weight: 600;
+            border: none; border-radius: 20px; cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .confirm-cancel-btn {
+            background: var(--btn-bg); color: var(--text-dim);
+            border: 1px solid var(--btn-border);
+        }
+        .confirm-cancel-btn:hover { background: var(--btn-hover); }
+        .confirm-ok-btn {
+            background: linear-gradient(135deg, #ff6b6b, #ee5a5a); color: #fff;
+        }
+        .confirm-ok-btn:hover { transform: scale(1.03); box-shadow: 0 5px 20px rgba(255,107,107,0.3); }
+
+        /* 三角形提示动画 */
+        @keyframes triangleFlash {
+            0% { opacity: 0; transform: scale(0.5); }
+            50% { opacity: 1; transform: scale(1.2); }
+            100% { opacity: 0; transform: scale(1.5); }
+        }
+        .triangle-notification {
+            position: absolute; font-size: 24px; font-weight: 700;
+            pointer-events: none; animation: triangleFlash 1s ease-out forwards; z-index: 30;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+
+        <div id="status-bar">
+            <div class="player-info" id="player-info"></div>
+            <div class="status-right">
+                <div id="turn-indicator">当前回合</div>
+                <button class="icon-btn" id="home-btn" title="回到首页">&#8962;</button>
+                <button class="icon-btn" id="lobby-btn" title="返回大厅">&#127968;</button>
+                <button class="icon-btn" id="reset-btn" title="重置游戏">&#8635;</button>
+                <button class="icon-btn" id="theme-btn" title="切换主题">&#9790;</button>
+                <button class="icon-btn" id="order-toggle-btn" title="连线顺序">&#931;</button>
+                <button class="icon-btn" id="hint-btn" title="提示">
+                    &#9733;
+                    <span class="hint-count" id="hint-count-badge">2</span>
+                </button>
+                <button class="icon-btn" id="settings-btn" title="设置">&#9881;</button>
+            </div>
+        </div>
+
+        <div id="message"></div>
+
+        <!-- 开始界面 -->
+        <div id="start-screen">
+            <h1>点连三角形</h1>
+            <p>连接点形成三角形，得分最高者获胜</p>
+            <div class="settings-panel">
+                <div class="setting-group">
+                    <span class="setting-label">玩家数量</span>
+                    <div class="player-select">
+                        <button class="player-btn selected" data-players="2">2<span>双人</span></button>
+                        <button class="player-btn" data-players="3">3<span>三人</span></button>
+                        <button class="player-btn" data-players="4">4<span>四人</span></button>
+                    </div>
+                </div>
+                <div class="setting-group">
+                    <span class="setting-label">点的数量</span>
+                    <input type="number" id="point-count" class="point-input" value="15" min="3" max="30">
+                </div>
+            </div>
+            <div class="start-buttons">
+                <button id="start-btn">开始游戏</button>
+                <button id="rules-btn">游戏说明</button>
+            </div>
+            <button class="start-theme-btn" id="start-theme-btn">&#9790; 切换浅色主题</button>
+            <div style="margin-top:30px;font-size:12px;color:var(--text-muted);letter-spacing:1px">Made with &#9829; by Lulu & Syuhoo &mdash; VibeArcade</div>
+        </div>
+
+        <!-- 游戏说明弹窗 -->
+        <div class="modal-overlay" id="rules-screen">
+            <div class="modal-box">
+                <h2>游戏说明</h2>
+                <div class="rules-content">
+                    <h3>游戏目标</h3>
+                    <p>在平面上通过连接点来形成三角形，获得最多三角形的玩家获胜。</p>
+
+                    <h3>基本规则</h3>
+                    <ul>
+                        <li>2~4名玩家轮流操作</li>
+                        <li>每回合选择两个点画一条连线</li>
+                        <li>连线不能与已有线条交叉</li>
+                        <li>如果画线后形成了新的三角形，该玩家可以继续画线</li>
+                        <li>没有形成三角形则轮到下一位玩家</li>
+                    </ul>
+
+                    <h3>三角形归属</h3>
+                    <p>完成三角形<strong>最后一笔</strong>的玩家获得该三角形的归属权。即使前两条边是其他玩家画的，只要第三条边是你画的，这个三角形就属于你。</p>
+
+                    <h3>游戏结束</h3>
+                    <p>当所有可能的线都画完，或无法再画新的线时，游戏结束。拥有最多三角形的玩家获胜。</p>
+
+                    <h3>提示功能</h3>
+                    <ul>
+                        <li>每名玩家有 2 次提示机会</li>
+                        <li>点击星号按钮 ★ 可激活提示</li>
+                        <li>提示会高亮显示 2 个可连接的点</li>
+                    </ul>
+
+                    <h3>连线顺序</h3>
+                    <p>点击工具栏中的序号按钮可以查看所有连线的绘制顺序，方便复盘。</p>
+                </div>
+                <button class="modal-close-btn" id="rules-close-btn">知道了</button>
+            </div>
+        </div>
+
+        <!-- 设置界面 -->
+        <div class="modal-overlay" id="settings-screen">
+            <div class="modal-box">
+                <h2>游戏设置</h2>
+
+                <div class="setting-section">
+                    <h3>点数设置</h3>
+                    <div class="setting-row">
+                        <label>点数量</label>
+                        <input type="number" id="settings-point-count" class="settings-input" value="15" min="3" max="30">
+                        <span style="font-size:13px;color:var(--text-muted)">当前: <span id="settings-current-points">15</span></span>
+                    </div>
+                    <div class="warning-text" id="point-change-warning" style="display:none">
+                        改变点数将重置游戏，当前进度会丢失！
+                    </div>
+                </div>
+
+                <div class="setting-section">
+                    <h3>玩家顺序</h3>
+                    <div class="order-list" id="order-list"></div>
+                    <button id="random-order-btn" style="
+                        margin-top:10px; padding:6px 18px; font-size:13px; font-weight:600;
+                        border:1px solid var(--btn-border); border-radius:16px;
+                        background:var(--btn-bg); color:var(--text-dim); cursor:pointer;
+                        transition:all 0.3s ease;
+                    " onmouseover="this.style.background='var(--btn-hover)'" onmouseout="this.style.background='var(--btn-bg)'">&#9858; 随机顺序</button>
+                </div>
+
+                <div class="settings-actions">
+                    <button class="settings-cancel-btn" id="settings-cancel">取消</button>
+                    <button class="settings-apply-btn" id="settings-apply">应用</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 结束界面 -->
+        <div id="end-screen">
+            <h2>游戏结束</h2>
+            <div class="winner-name" id="winner-name"></div>
+            <div class="scores-list" id="scores-list"></div>
+            <button id="restart-btn">再来一局</button>
+        </div>
+
+        <!-- 确认弹窗 -->
+        <div id="confirm-overlay">
+            <div id="confirm-box">
+                <div class="confirm-icon" id="confirm-icon">&#9888;</div>
+                <div class="confirm-text" id="confirm-text"></div>
+                <div class="confirm-actions">
+                    <button class="confirm-cancel-btn" id="confirm-cancel">取消</button>
+                    <button class="confirm-ok-btn" id="confirm-ok">确认</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        var CONFIG = {
+            DEFAULT_NUM_POINTS: 15,
+            MAX_NUM_POINTS: 30,
+            DEFAULT_HINT_COUNT: 2,
+            PLAYER_COLORS: ['#ff6b6b', '#4ecdc4', '#ffe66d', '#a855f7'],
+            PLAYER_NAMES: ['红队', '蓝队', '黄队', '紫队']
+        };
+
+        var game = {
+            canvas: null, ctx: null,
+            points: [], edges: new Map(), edgeOrder: [],
+            triangles: [],
+            players: [], currentPlayer: 0,
+            playerOrder: [],
+            selectedPoint: null, playerCount: 2,
+            gameStarted: false, canContinue: false,
+            numPoints: 15, animFrame: null,
+            hintActive: false, hintPerPlayer: [],
+            showEdgeOrder: false,
+            theme: 'dark'
+        };
+
+        var hintPressTimer = null;
+
+        function isLightTheme() {
+            return game.theme === 'light';
+        }
+
+        function setTheme(theme) {
+            game.theme = theme;
+            document.documentElement.setAttribute('data-theme', theme);
+            // 更新按钮文字
+            var themeBtn = document.getElementById('theme-btn');
+            var startThemeBtn = document.getElementById('start-theme-btn');
+            if (theme === 'light') {
+                themeBtn.innerHTML = '&#9728;';
+                themeBtn.title = '切换深色主题';
+                if (startThemeBtn) startThemeBtn.innerHTML = '&#9728; 切换深色主题';
+            } else {
+                themeBtn.innerHTML = '&#9790;';
+                themeBtn.title = '切换浅色主题';
+                if (startThemeBtn) startThemeBtn.innerHTML = '&#9790; 切换浅色主题';
+            }
+        }
+
+        function toggleTheme() {
+            setTheme(isLightTheme() ? 'dark' : 'light');
+        }
+
+        function isMobile() {
+            return window.innerWidth <= 768;
+        }
+
+        function getHitRadius() {
+            return isMobile() ? 28 : 18;
+        }
+
+        function getStatusBarHeight() {
+            var bar = document.getElementById('status-bar');
+            return bar ? bar.offsetHeight : 60;
+        }
+
+        function init() {
+            game.canvas = document.getElementById('game-canvas');
+            game.ctx = game.canvas.getContext('2d');
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            game.canvas.addEventListener('click', handleClick);
+            game.canvas.addEventListener('mousemove', handleMouseMove);
+            // 触摸事件
+            game.canvas.addEventListener('touchstart', handleTouchStart, { passive: false });
+            game.canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+            game.canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
+
+            document.querySelectorAll('.player-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.player-btn').forEach(function(b) { b.classList.remove('selected'); });
+                    btn.classList.add('selected');
+                    game.playerCount = parseInt(btn.dataset.players);
+                });
+            });
+
+            document.getElementById('start-btn').addEventListener('click', startGame);
+            document.getElementById('restart-btn').addEventListener('click', restartGame);
+            document.getElementById('settings-btn').addEventListener('click', openSettings);
+            document.getElementById('settings-cancel').addEventListener('click', closeSettings);
+            document.getElementById('settings-apply').addEventListener('click', applySettings);
+
+            // 首页/重置按钮
+            document.getElementById('home-btn').addEventListener('click', function() {
+                if (!game.gameStarted) return;
+                showConfirm('⚠ 回到首页', '确定要回到首页吗？当前游戏进度将会丢失！', function() {
+                    game.gameStarted = false;
+                    game.hintActive = false;
+                    if (game.animFrame) { cancelAnimationFrame(game.animFrame); game.animFrame = null; }
+                    document.getElementById('start-screen').style.display = 'flex';
+                });
+            });
+            // 返回大厅按钮
+            document.getElementById('lobby-btn').addEventListener('click', function() {
+                if (!game.gameStarted) { window.location.href = '../index.html'; return; }
+                showConfirm('⚠ 返回大厅', '确定要返回游戏大厅吗？当前游戏进度将会丢失！', function() {
+                    if (game.animFrame) { cancelAnimationFrame(game.animFrame); game.animFrame = null; }
+                    window.location.href = '../index.html';
+                });
+            });
+            document.getElementById('reset-btn').addEventListener('click', function() {
+                if (!game.gameStarted) return;
+                showConfirm('⚠ 重置游戏', '确定要重置当前游戏吗？所有进度将会丢失！', function() {
+                    startGame();
+                });
+            });
+
+            // 主题切换
+            document.getElementById('theme-btn').addEventListener('click', toggleTheme);
+            document.getElementById('start-theme-btn').addEventListener('click', toggleTheme);
+
+            // 游戏说明
+            document.getElementById('rules-btn').addEventListener('click', function() {
+                document.getElementById('rules-screen').classList.add('show');
+            });
+            document.getElementById('rules-close-btn').addEventListener('click', function() {
+                document.getElementById('rules-screen').classList.remove('show');
+            });
+
+            // 连线顺序按钮
+            document.getElementById('order-toggle-btn').addEventListener('click', function() {
+                game.showEdgeOrder = !game.showEdgeOrder;
+                this.classList.toggle('active', game.showEdgeOrder);
+            });
+
+            document.getElementById('settings-point-count').addEventListener('input', function() {
+                var val = parseInt(this.value);
+                var cur = game.numPoints;
+                document.getElementById('point-change-warning').style.display = (val !== cur) ? 'block' : 'none';
+            });
+
+            // 灯泡按钮：长按/点击激活提示
+            var hintBtn = document.getElementById('hint-btn');
+            var hintActive = false;
+
+            function startHint(e) {
+                e.preventDefault();
+                if (!game.gameStarted) return;
+                if (game.hintPerPlayer[game.currentPlayer] <= 0) {
+                    showMessage('提示次数已用完！');
+                    return;
+                }
+                if (isMobile()) {
+                    // 移动端：切换模式
+                    if (game.hintActive) {
+                        game.hintActive = false;
+                        hintBtn.classList.remove('active');
+                    } else {
+                        game.hintPerPlayer[game.currentPlayer]--;
+                        game.hintActive = true;
+                        hintBtn.classList.add('active');
+                        updateHintBadge();
+                    }
+                    return;
+                }
+                // 桌面端：长按
+                game.hintPerPlayer[game.currentPlayer]--;
+                game.hintActive = true;
+                hintBtn.classList.add('active');
+                updateHintBadge();
+            }
+
+            function endHint(e) {
+                e.preventDefault();
+                if (isMobile()) return; // 移动端不自动结束
+                game.hintActive = false;
+                hintBtn.classList.remove('active');
+            }
+
+            hintBtn.addEventListener('mousedown', startHint);
+            hintBtn.addEventListener('mouseup', endHint);
+            hintBtn.addEventListener('mouseleave', endHint);
+            hintBtn.addEventListener('touchstart', startHint, { passive: false });
+            hintBtn.addEventListener('touchend', endHint, { passive: false });
+            hintBtn.addEventListener('touchcancel', endHint, { passive: false });
+
+            // 确认弹窗按钮
+            document.getElementById('confirm-cancel').addEventListener('click', closeConfirm);
+            document.getElementById('confirm-ok').addEventListener('click', function() {
+                if (confirmCallback) confirmCallback();
+                closeConfirm();
+            });
+        }
+
+        function updateHintBadge() {
+            var badge = document.getElementById('hint-count-badge');
+            if (game.gameStarted) {
+                var remaining = game.hintPerPlayer[game.currentPlayer];
+                badge.textContent = remaining;
+                var btn = document.getElementById('hint-btn');
+                if (remaining <= 0) {
+                    btn.classList.add('disabled');
+                } else {
+                    btn.classList.remove('disabled');
+                }
+            }
+        }
+
+        function resizeCanvas() {
+            game.canvas.width = window.innerWidth;
+            game.canvas.height = window.innerHeight;
+        }
+
+        function edgeKey(a, b) {
+            return a < b ? a + '-' + b : b + '-' + a;
+        }
+
+        function segmentsIntersect(ax, ay, bx, by, cx, cy, dx, dy) {
+            function cross(ox, oy, px, py, qx, qy) {
+                return (px - ox) * (qy - oy) - (py - oy) * (qx - ox);
+            }
+            var d1 = cross(cx, cy, dx, dy, ax, ay);
+            var d2 = cross(cx, cy, dx, dy, bx, by);
+            var d3 = cross(ax, ay, bx, by, cx, cy);
+            var d4 = cross(ax, ay, bx, by, dx, dy);
+
+            if (((d1 > 0 && d2 < 0) || (d1 < 0 && d2 > 0)) &&
+                ((d3 > 0 && d4 < 0) || (d3 < 0 && d4 > 0))) {
+                return true;
+            }
+            return false;
+        }
+
+        function wouldIntersect(p1Id, p2Id) {
+            var p1 = game.points[p1Id];
+            var p2 = game.points[p2Id];
+            var result = false;
+
+            game.edges.forEach(function(ownerId, key) {
+                if (result) return;
+                var parts = key.split('-');
+                var ep1 = game.points[parseInt(parts[0])];
+                var ep2 = game.points[parseInt(parts[1])];
+                if (parseInt(parts[0]) === p1Id || parseInt(parts[0]) === p2Id ||
+                    parseInt(parts[1]) === p1Id || parseInt(parts[1]) === p2Id) {
+                    return;
+                }
+                if (segmentsIntersect(p1.x, p1.y, p2.x, p2.y, ep1.x, ep1.y, ep2.x, ep2.y)) {
+                    result = true;
+                }
+            });
+
+            return result;
+        }
+
+        function getConnectablePoints(pointId) {
+            var connectable = [];
+            for (var i = 0; i < game.points.length; i++) {
+                if (i === pointId) continue;
+                var key = edgeKey(pointId, i);
+                if (game.edges.has(key)) continue;
+                if (wouldIntersect(pointId, i)) continue;
+                connectable.push(i);
+            }
+            return connectable;
+        }
+
+        function generatePoints() {
+            var points = [];
+            var mobile = isMobile();
+            var topOffset = mobile ? 100 : 70;
+            var margin = mobile ? 30 : 60;
+            var n = game.numPoints;
+            var minDist = n > 20 ? (mobile ? 38 : 50) : (n > 15 ? (mobile ? 42 : 55) : (mobile ? 48 : 65));
+
+            for (var attempts = 0; points.length < n && attempts < 3000; attempts++) {
+                var x = margin + Math.random() * (game.canvas.width - margin * 2);
+                var y = topOffset + margin + Math.random() * (game.canvas.height - topOffset - margin * 2);
+                var ok = true;
+                for (var j = 0; j < points.length; j++) {
+                    if (Math.hypot(points[j].x - x, points[j].y - y) < minDist) { ok = false; break; }
+                }
+                if (ok) points.push({ x: x, y: y, id: points.length });
+            }
+            while (points.length < n) {
+                points.push({
+                    x: margin + Math.random() * (game.canvas.width - margin * 2),
+                    y: topOffset + margin + Math.random() * (game.canvas.height - topOffset - margin * 2),
+                    id: points.length
+                });
+            }
+            return points;
+        }
+
+        function startGame() {
+            document.getElementById('start-screen').style.display = 'none';
+
+            var pointInput = document.getElementById('point-count');
+            var n = Math.max(3, Math.min(CONFIG.MAX_NUM_POINTS, parseInt(pointInput.value) || CONFIG.DEFAULT_NUM_POINTS));
+            pointInput.value = n;
+
+            game.numPoints = n;
+            game.points = generatePoints();
+            game.edges = new Map();
+            game.edgeOrder = [];
+            game.triangles = [];
+            game.selectedPoint = null;
+            game.gameStarted = true;
+            game.canContinue = false;
+            game.hintActive = false;
+            game.showEdgeOrder = false;
+            analytics.trackGame(game.playerCount, game.numPoints);
+            document.getElementById('order-toggle-btn').classList.remove('active');
+
+            game.players = [];
+            game.playerOrder = [];
+            game.hintPerPlayer = [];
+            for (var i = 0; i < game.playerCount; i++) {
+                game.players.push({ id: i, name: CONFIG.PLAYER_NAMES[i], color: CONFIG.PLAYER_COLORS[i], score: 0 });
+                game.playerOrder.push(i);
+                game.hintPerPlayer.push(CONFIG.DEFAULT_HINT_COUNT);
+            }
+            game.currentPlayer = game.playerOrder[0];
+
+            updatePlayerUI();
+            updateHintBadge();
+            if (game.animFrame) cancelAnimationFrame(game.animFrame);
+            renderLoop();
+            updateStatsBar();
+        }
+
+        function restartGame() {
+            document.getElementById('end-screen').classList.remove('show');
+            document.getElementById('start-screen').style.display = 'flex';
+        }
+
+        function updatePlayerUI() {
+            var container = document.getElementById('player-info');
+            container.innerHTML = '';
+            game.players.forEach(function(player, idx) {
+                var badge = document.createElement('div');
+                badge.className = 'player-badge' + (idx === game.currentPlayer ? ' active' : '');
+                badge.style.color = player.color;
+                var hintStr = '';
+                if (game.hintPerPlayer[idx] !== undefined) {
+                    hintStr = '<span class="player-hints" title="剩余提示">&#9733;' + game.hintPerPlayer[idx] + '</span>';
+                }
+                badge.innerHTML =
+                    '<div class="player-dot" style="background:' + player.color + ';box-shadow:0 0 10px ' + player.color + '"></div>' +
+                    '<span class="player-name">' + player.name + '</span>' +
+                    '<span class="player-score">' + player.score + '</span>' +
+                    hintStr;
+                container.appendChild(badge);
+            });
+            var turnText = game.canContinue ? game.players[game.currentPlayer].name + ' 继续！' : game.players[game.currentPlayer].name + ' 的回合';
+            document.getElementById('turn-indicator').textContent = turnText;
+            updateHintBadge();
+        }
+
+        var confirmCallback = null;
+
+        function showConfirm(title, text, onConfirm) {
+            document.getElementById('confirm-icon').textContent = title.split(' ')[0] || '⚠';
+            document.getElementById('confirm-text').textContent = text;
+            confirmCallback = onConfirm;
+            document.getElementById('confirm-overlay').classList.add('show');
+        }
+
+        function closeConfirm() {
+            document.getElementById('confirm-overlay').classList.remove('show');
+            confirmCallback = null;
+        }
+
+        function showMessage(text) {
+            var msg = document.getElementById('message');
+            msg.textContent = text;
+            msg.classList.add('show');
+            setTimeout(function() { msg.classList.remove('show'); }, 2000);
+        }
+
+        function showTriangleNotification(x, y, text, color) {
+            var el = document.createElement('div');
+            el.className = 'triangle-notification';
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            el.style.color = color;
+            el.textContent = text;
+            document.getElementById('game-container').appendChild(el);
+            setTimeout(function() { el.remove(); }, 1000);
+        }
+
+        function handleClick(e) {
+            if (!game.gameStarted) return;
+
+            var rect = game.canvas.getBoundingClientRect();
+            var mx = e.clientX - rect.left;
+            var my = e.clientY - rect.top;
+            var hitR = getHitRadius();
+
+            var clickedPoint = null;
+            for (var i = 0; i < game.points.length; i++) {
+                var p = game.points[i];
+                if (Math.hypot(p.x - mx, p.y - my) < hitR) {
+                    clickedPoint = p;
+                    break;
+                }
+            }
+
+            if (!clickedPoint) {
+                game.selectedPoint = null;
+                return;
+            }
+
+            if (game.selectedPoint === null) {
+                game.selectedPoint = clickedPoint;
+                return;
+            }
+
+            if (game.selectedPoint.id === clickedPoint.id) {
+                game.selectedPoint = null;
+                return;
+            }
+
+            var key = edgeKey(game.selectedPoint.id, clickedPoint.id);
+
+            if (game.edges.has(key)) {
+                showMessage('这条线已经画过了！');
+                game.selectedPoint = null;
+                return;
+            }
+
+            if (wouldIntersect(game.selectedPoint.id, clickedPoint.id)) {
+                showMessage('线条不能交叉！');
+                game.selectedPoint = null;
+                return;
+            }
+
+            var currentPlayerId = game.currentPlayer;
+            game.edges.set(key, currentPlayerId);
+            game.edgeOrder.push(key);
+
+            var newTriangles = findNewTriangles(game.selectedPoint.id, clickedPoint.id);
+
+            if (newTriangles.length > 0) {
+                for (var t = 0; t < newTriangles.length; t++) {
+                    newTriangles[t].owner = currentPlayerId;
+                    game.triangles.push(newTriangles[t]);
+                }
+                var player = game.players[currentPlayerId];
+                player.score += newTriangles.length;
+                for (var ti = 0; ti < newTriangles.length; ti++) { analytics.trackTriangle(); }
+
+                showTriangleNotification(
+                    (game.selectedPoint.x + clickedPoint.x) / 2,
+                    (game.selectedPoint.y + clickedPoint.y) / 2 - 30,
+                    '+' + newTriangles.length + ' 三角形！',
+                    player.color
+                );
+
+                game.canContinue = true;
+                game.selectedPoint = null;
+                updatePlayerUI();
+                checkGameEnd();
+            } else {
+                game.canContinue = false;
+                game.selectedPoint = null;
+                nextPlayer();
+            }
+        }
+
+        function findNewTriangles(p1Id, p2Id) {
+            var result = [];
+
+            var p1Neighbors = {};
+            game.edges.forEach(function(ownerId, key) {
+                var parts = key.split('-');
+                var a = parseInt(parts[0]);
+                var b = parseInt(parts[1]);
+                if (a === p1Id) p1Neighbors[b] = true;
+                if (b === p1Id) p1Neighbors[a] = true;
+            });
+
+            game.edges.forEach(function(ownerId, key) {
+                var parts = key.split('-');
+                var a = parseInt(parts[0]);
+                var b = parseInt(parts[1]);
+                var neighborId = -1;
+                if (a === p2Id) neighborId = b;
+                if (b === p2Id) neighborId = a;
+
+                if (neighborId >= 0 && p1Neighbors[neighborId]) {
+                    var triKey = [p1Id, p2Id, neighborId].sort(function(x, y) { return x - y; }).join('-');
+
+                    var exists = false;
+                    for (var i = 0; i < game.triangles.length; i++) {
+                        if (game.triangles[i].key === triKey) { exists = true; break; }
+                    }
+                    if (!exists) {
+                        result.push({ points: [p1Id, p2Id, neighborId], key: triKey });
+                    }
+                }
+            });
+
+            return result;
+        }
+
+        function nextPlayer() {
+            var orderIdx = game.playerOrder.indexOf(game.currentPlayer);
+            orderIdx = (orderIdx + 1) % game.playerOrder.length;
+            game.currentPlayer = game.playerOrder[orderIdx];
+            updatePlayerUI();
+            checkGameEnd();
+        }
+
+        function checkGameEnd() {
+            var maxEdges = (game.numPoints * (game.numPoints - 1)) / 2;
+            if (game.edges.size >= maxEdges) {
+                endGame();
+                return;
+            }
+            var hasValidMove = false;
+            for (var i = 0; i < game.points.length && !hasValidMove; i++) {
+                for (var j = i + 1; j < game.points.length && !hasValidMove; j++) {
+                    var key = edgeKey(i, j);
+                    if (!game.edges.has(key) && !wouldIntersect(i, j)) {
+                        hasValidMove = true;
+                    }
+                }
+            }
+            if (!hasValidMove) {
+                endGame();
+            }
+        }
+
+        function endGame() {
+            game.gameStarted = false;
+            game.hintActive = false;
+
+            var sorted = game.players.slice().sort(function(a, b) { return b.score - a.score; });
+            var maxScore = sorted[0].score;
+            var winners = sorted.filter(function(p) { return p.score === maxScore; });
+
+            var winnerText;
+            if (winners.length > 1) {
+                winnerText = winners.map(function(w) { return w.name; }).join('、') + ' 平局！';
+            } else {
+                winnerText = winners[0].name + ' 获胜！';
+            }
+
+            document.getElementById('winner-name').textContent = winnerText;
+            document.getElementById('winner-name').style.color = winners[0].color;
+
+            var scoresList = document.getElementById('scores-list');
+            scoresList.innerHTML = '';
+            var rankEmojis = ['🥇', '🥈', '🥉', '4️⃣'];
+
+            sorted.forEach(function(player, index) {
+                var row = document.createElement('div');
+                row.className = 'score-row' + (player.score === maxScore ? ' winner' : '');
+                row.innerHTML =
+                    '<span class="score-rank">' + (rankEmojis[index] || (index + 1)) + '</span>' +
+                    '<span class="score-team" style="color:' + player.color + '">' + player.name + '</span>' +
+                    '<span class="score-value" style="color:' + player.color + '">' + player.score + '分</span>';
+                scoresList.appendChild(row);
+            });
+
+            document.getElementById('end-screen').classList.add('show');
+            analytics.trackGameEnd();
+        }
+
+        // ===== 设置界面 =====
+        function openSettings() {
+            if (!game.gameStarted) return;
+
+            document.getElementById('settings-current-points').textContent = game.numPoints;
+            document.getElementById('settings-point-count').value = game.numPoints;
+            document.getElementById('point-change-warning').style.display = 'none';
+
+            renderOrderList();
+            document.getElementById('settings-screen').classList.add('show');
+
+            var randBtn = document.getElementById('random-order-btn');
+            randBtn.onclick = function() {
+                for (var i = game.playerOrder.length - 1; i > 0; i--) {
+                    var j = Math.floor(Math.random() * (i + 1));
+                    var tmp = game.playerOrder[i];
+                    game.playerOrder[i] = game.playerOrder[j];
+                    game.playerOrder[j] = tmp;
+                }
+                renderOrderList();
+            };
+        }
+
+        function closeSettings() {
+            document.getElementById('settings-screen').classList.remove('show');
+        }
+
+        function renderOrderList() {
+            var list = document.getElementById('order-list');
+            list.innerHTML = '';
+
+            game.playerOrder.forEach(function(pid, idx) {
+                var player = game.players[pid];
+                var item = document.createElement('div');
+                item.className = 'order-item' + (pid === game.currentPlayer ? ' current' : '');
+                item.innerHTML =
+                    '<span class="order-num">' + (idx + 1) + '</span>' +
+                    '<span class="order-color" style="background:' + player.color + ';box-shadow:0 0 6px ' + player.color + '"></span>' +
+                    '<span class="order-name" style="color:' + player.color + '">' + player.name + '</span>' +
+                    '<button class="order-btn" data-dir="up" data-idx="' + idx + '"' + (idx === 0 ? ' disabled' : '') + '>&#9650;</button>' +
+                    '<button class="order-btn" data-dir="down" data-idx="' + idx + '"' + (idx === game.playerOrder.length - 1 ? ' disabled' : '') + '>&#9660;</button>';
+                list.appendChild(item);
+            });
+
+            list.querySelectorAll('.order-btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var idx = parseInt(btn.dataset.idx);
+                    var dir = btn.dataset.dir;
+                    var newIdx = dir === 'up' ? idx - 1 : idx + 1;
+                    if (newIdx < 0 || newIdx >= game.playerOrder.length) return;
+                    var tmp = game.playerOrder[idx];
+                    game.playerOrder[idx] = game.playerOrder[newIdx];
+                    game.playerOrder[newIdx] = tmp;
+                    renderOrderList();
+                });
+            });
+        }
+
+        function applySettings() {
+            var newPointCount = Math.max(3, Math.min(CONFIG.MAX_NUM_POINTS, parseInt(document.getElementById('settings-point-count').value) || game.numPoints));
+            document.getElementById('settings-point-count').value = newPointCount;
+
+            var pointChanged = newPointCount !== game.numPoints;
+
+            closeSettings();
+
+            if (pointChanged) {
+                game.numPoints = newPointCount;
+                document.getElementById('point-count').value = newPointCount;
+                startGame();
+            } else {
+                updatePlayerUI();
+            }
+        }
+
+        var touchHoveredPoint = null;
+        var touchStartPos = null;
+        var touchMoved = false;
+
+        function handleTouchStart(e) {
+            e.preventDefault();
+            if (!game.gameStarted) return;
+            touchMoved = false;
+            var touch = e.touches[0];
+            touchStartPos = { x: touch.clientX, y: touch.clientY };
+            var rect = game.canvas.getBoundingClientRect();
+            var mx = touch.clientX - rect.left;
+            var my = touch.clientY - rect.top;
+            var hitR = getHitRadius();
+
+            touchHoveredPoint = null;
+            for (var i = 0; i < game.points.length; i++) {
+                var p = game.points[i];
+                if (Math.hypot(p.x - mx, p.y - my) < hitR) {
+                    touchHoveredPoint = p;
+                    break;
+                }
+            }
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+            if (touchStartPos) {
+                var touch = e.touches[0];
+                var dx = touch.clientX - touchStartPos.x;
+                var dy = touch.clientY - touchStartPos.y;
+                if (Math.hypot(dx, dy) > 10) {
+                    touchMoved = true;
+                }
+            }
+        }
+
+        function handleTouchEnd(e) {
+            e.preventDefault();
+            if (touchMoved) {
+                touchHoveredPoint = null;
+                return;
+            }
+            if (touchHoveredPoint) {
+                handleClick({ clientX: touchStartPos.x, clientY: touchStartPos.y });
+            }
+            touchHoveredPoint = null;
+            touchStartPos = null;
+        }
+
+        var hoveredPoint = null;
+
+        function handleMouseMove(e) {
+            var rect = game.canvas.getBoundingClientRect();
+            var mx = e.clientX - rect.left;
+            var my = e.clientY - rect.top;
+            var hitR = getHitRadius();
+
+            hoveredPoint = null;
+            for (var i = 0; i < game.points.length; i++) {
+                var p = game.points[i];
+                if (Math.hypot(p.x - mx, p.y - my) < hitR) {
+                    hoveredPoint = p;
+                    break;
+                }
+            }
+        }
+
+        function renderLoop() {
+            var ctx = game.ctx;
+            var w = game.canvas.width;
+            var h = game.canvas.height;
+            var light = isLightTheme();
+
+            // 画布背景
+            ctx.fillStyle = light ? '#e8ecf1' : '#1a1a2e';
+            ctx.fillRect(0, 0, w, h);
+
+            // 网格
+            ctx.strokeStyle = light ? 'rgba(0,0,0,0.04)' : 'rgba(255,255,255,0.03)';
+            ctx.lineWidth = 1;
+            for (var x = 0; x < w; x += 50) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke(); }
+            for (var y = 0; y < h; y += 50) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
+
+            if (!game.gameStarted) { game.animFrame = requestAnimationFrame(renderLoop); return; }
+
+            // 提示模式
+            var hintPoints = {};
+            var hintFromPoint = null;
+            if (game.hintActive) {
+                if (game.selectedPoint !== null) {
+                    var cp = getConnectablePoints(game.selectedPoint.id);
+                    var hintCount = Math.min(2, cp.length);
+                    for (var hi = 0; hi < hintCount; hi++) {
+                        hintPoints[cp[hi]] = true;
+                    }
+                    hintFromPoint = game.selectedPoint;
+                } else {
+                    var foundPair = null;
+                    for (var fi = 0; fi < game.points.length && !foundPair; fi++) {
+                        for (var fj = fi + 1; fj < game.points.length && !foundPair; fj++) {
+                            var fkey = edgeKey(fi, fj);
+                            if (!game.edges.has(fkey) && !wouldIntersect(fi, fj)) {
+                                foundPair = [fi, fj];
+                            }
+                        }
+                    }
+                    if (foundPair) {
+                        hintPoints[foundPair[0]] = true;
+                        hintPoints[foundPair[1]] = true;
+                        hintFromPoint = game.points[foundPair[0]];
+                    }
+                }
+            }
+
+            // 三角形
+            for (var i = 0; i < game.triangles.length; i++) {
+                var tri = game.triangles[i];
+                var tp1 = game.points[tri.points[0]];
+                var tp2 = game.points[tri.points[1]];
+                var tp3 = game.points[tri.points[2]];
+                var owner = game.players[tri.owner];
+
+                ctx.fillStyle = owner.color + (light ? '20' : '25');
+                ctx.strokeStyle = owner.color + (light ? '50' : '60');
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(tp1.x, tp1.y);
+                ctx.lineTo(tp2.x, tp2.y);
+                ctx.lineTo(tp3.x, tp3.y);
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
+            }
+
+            // 边
+            game.edges.forEach(function(playerId, key) {
+                var parts = key.split('-');
+                var ep1 = game.points[parseInt(parts[0])];
+                var ep2 = game.points[parseInt(parts[1])];
+                var eplayer = game.players[playerId];
+
+                ctx.strokeStyle = eplayer.color + (light ? 'dd' : 'ee');
+                ctx.lineWidth = 2.5;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(ep1.x, ep1.y);
+                ctx.lineTo(ep2.x, ep2.y);
+                ctx.stroke();
+                ctx.lineCap = 'butt';
+            });
+
+            // 连线顺序编号
+            if (game.showEdgeOrder) {
+                var orderMap = {};
+                for (var oi = 0; oi < game.edgeOrder.length; oi++) {
+                    orderMap[game.edgeOrder[oi]] = oi + 1;
+                }
+
+                game.edges.forEach(function(playerId, key) {
+                    var parts = key.split('-');
+                    var ep1 = game.points[parseInt(parts[0])];
+                    var ep2 = game.points[parseInt(parts[1])];
+                    var eplayer = game.players[playerId];
+                    var orderNum = orderMap[key] || 0;
+
+                    var mx = (ep1.x + ep2.x) / 2;
+                    var my = (ep1.y + ep2.y) / 2;
+
+                    var labelSize = orderNum > 9 ? 18 : 14;
+                    ctx.fillStyle = light ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.7)';
+                    ctx.beginPath();
+                    ctx.arc(mx, my, labelSize, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.strokeStyle = eplayer.color;
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(mx, my, labelSize, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    ctx.fillStyle = light ? '#1a1a2e' : '#fff';
+                    ctx.font = 'bold 13px -apple-system, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(orderNum, mx, my);
+                });
+            }
+
+            // 提示线
+            if (game.hintActive && hintFromPoint !== null) {
+                var selP = hintFromPoint;
+                for (var hpi in hintPoints) {
+                    var tgtP = game.points[parseInt(hpi)];
+                    ctx.strokeStyle = 'rgba(255,230,109,0.7)';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([8, 5]);
+                    ctx.beginPath();
+                    ctx.moveTo(selP.x, selP.y);
+                    ctx.lineTo(tgtP.x, tgtP.y);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            }
+
+            // 预览线
+            if (!game.hintActive && game.selectedPoint && hoveredPoint && hoveredPoint.id !== game.selectedPoint.id) {
+                var previewKey = edgeKey(game.selectedPoint.id, hoveredPoint.id);
+                if (!game.edges.has(previewKey)) {
+                    var wouldCross = wouldIntersect(game.selectedPoint.id, hoveredPoint.id);
+                    var previewPlayer = game.players[game.currentPlayer];
+                    ctx.strokeStyle = wouldCross ? 'rgba(255,80,80,0.7)' : previewPlayer.color + '80';
+                    ctx.lineWidth = 2;
+                    ctx.setLineDash([5, 5]);
+                    ctx.beginPath();
+                    ctx.moveTo(game.selectedPoint.x, game.selectedPoint.y);
+                    ctx.lineTo(hoveredPoint.x, hoveredPoint.y);
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            }
+
+            // 点
+            var mobile = isMobile();
+            for (var i = 0; i < game.points.length; i++) {
+                var p = game.points[i];
+                var isSel = game.selectedPoint && game.selectedPoint.id === p.id;
+                var isHov = hoveredPoint && hoveredPoint.id === p.id;
+                var isHint = hintPoints[p.id];
+
+                // 提示点脉动光环
+                if (isHint) {
+                    var pulse = 0.5 + 0.5 * Math.sin(Date.now() / 300);
+                    var pulseR = (mobile ? 26 : 22) + pulse * 8;
+                    ctx.strokeStyle = 'rgba(255,230,109,' + (0.3 + pulse * 0.5) + ')';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, pulseR, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
+                // 选中/悬浮 环形指示
+                if (isSel || isHov) {
+                    var ringR = (mobile ? 20 : 18);
+                    ctx.strokeStyle = isSel ? (light ? 'rgba(78,205,196,0.8)' : 'rgba(255,255,255,0.8)') : (light ? 'rgba(78,205,196,0.5)' : 'rgba(255,255,255,0.5)');
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, ringR, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+
+                // 核心圆点
+                var r = isHint ? 9 : (mobile ? 8 : 7);
+                if (isHint) {
+                    ctx.fillStyle = '#ffe66d';
+                } else if (isSel) {
+                    ctx.fillStyle = light ? '#3ba89e' : '#ffffff';
+                } else if (isHov) {
+                    ctx.fillStyle = light ? '#555555' : '#dddddd';
+                } else {
+                    ctx.fillStyle = light ? '#888888' : '#cccccc';
+                }
+
+                ctx.shadowColor = isHint ? 'rgba(255,230,109,0.6)' : (isSel ? 'rgba(78,205,196,0.4)' : 'rgba(0,0,0,0)');
+                ctx.shadowBlur = isHint ? 8 : (isSel ? 6 : 0);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                // 内高光
+                if (r >= 7) {
+                    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+                    ctx.beginPath();
+                    ctx.arc(p.x - r * 0.2, p.y - r * 0.25, r * 0.4, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            game.animFrame = requestAnimationFrame(renderLoop);
+        }
+
+        // ===== 打点统计 =====
+
+        // 生成/读取唯一用户 ID
+        function getUserId() {
+            var id = localStorage.getItem('vibe_uid');
+            if (!id) {
+                id = 'u_' + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+                localStorage.setItem('vibe_uid', id);
+            }
+            return id;
+        }
+
+        // 服务端打点（EdgeOne KV）
+        function serverTrack(event) {
+            try {
+                navigator.sendBeacon('/api/track', JSON.stringify({ userId: getUserId(), event: event }));
+            } catch (e) {
+                // fallback: 静默失败
+            }
+        }
+
+        // 本地统计（离线补充）
+        var analytics = {
+            data: null,
+            init: function() {
+                var saved = localStorage.getItem('vibearcade_stats');
+                this.data = saved ? JSON.parse(saved) : {
+                    totalVisits: 0,
+                    gamesPlayed: 0,
+                    trianglesFormed: 0,
+                    gamesByPlayers: { '2': 0, '3': 0, '4': 0 },
+                    gamesByPoints: {},
+                    lastVisit: null
+                };
+                this.data.totalVisits++;
+                this.data.lastVisit = new Date().toISOString();
+                this.save();
+                // 上报服务端
+                serverTrack('visit');
+            },
+            save: function() {
+                localStorage.setItem('vibearcade_stats', JSON.stringify(this.data));
+            },
+            trackGame: function(playerCount, pointCount) {
+                this.data.gamesPlayed++;
+                this.data.gamesByPlayers[String(playerCount)] = (this.data.gamesByPlayers[String(playerCount)] || 0) + 1;
+                this.data.gamesByPoints[String(pointCount)] = (this.data.gamesByPoints[String(pointCount)] || 0) + 1;
+                this.save();
+                serverTrack('game_start');
+            },
+            trackTriangle: function() {
+                this.data.trianglesFormed++;
+                this.save();
+                serverTrack('triangle_formed');
+            },
+            trackGameEnd: function() {
+                serverTrack('game_end');
+            },
+            getSummary: function() {
+                var d = this.data;
+                var topConfig = Object.entries(d.gamesByPoints).sort(function(a,b){ return b[1]-a[1]; })[0];
+                return '共访问 ' + d.totalVisits + ' 次 | 已玩 ' + d.gamesPlayed + ' 局 | 累计 ' + d.trianglesFormed + ' 个三角形' +
+                    (topConfig ? ' | 最爱 ' + topConfig[0] + ' 点' : '');
+            }
+        };
+
+        // 启动
+        analytics.init();
+        init();
+    </script>
+</body>
+</html>

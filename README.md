@@ -1,8 +1,11 @@
-# VibeArcade - 点连三角形
+# VibeArcade - 游戏大厅
 
 Made with ♥ by Lulu & Syuhoo
 
-一个在平面上连接点形成三角形的多人策略游戏。
+一个包含多款小游戏的合集站点。当前提供：
+
+- **点连三角形**：在平面上连接点形成三角形的多人策略游戏（2~4 人）。
+- **弹弹乐 Bumper Arena**：拖拽弹射对战，竞技场不断缩小，先把对手撞出界者得分。
 
 ## 游戏规则
 
@@ -25,8 +28,15 @@ Made with ♥ by Lulu & Syuhoo
 
 ## 项目结构
 
+本项目是一个「游戏大厅 + 子游戏」结构。访问根域名即进入游戏大厅，可选择游玩不同游戏。
+
 ```
-├── index.html                       # 游戏主页（HTML + CSS + JS 单文件）
+├── index.html                       # 游戏大厅（选择页）
+├── games/
+│   ├── triangle/
+│   │   └── index.html               # 点连三角形（原游戏，含返回大厅按钮）
+│   └── bumper-arena/
+│       └── index.html               # 弹弹乐 Bumper Arena（含「大厅」返回按钮）
 ├── edge-functions/
 │   └── api/
 │       ├── track.js                 # 打点上报 API (POST)
@@ -34,6 +44,8 @@ Made with ♥ by Lulu & Syuhoo
 ├── README.md
 └── SPEC.md
 ```
+
+> 打点统计（DAU/MAU/PV）目前仅服务「点连三角形」游戏。弹弹乐 Bumper Arena 为纯前端自包含游戏，暂未接入打点。
 
 ## 部署到 EdgeOne Pages
 

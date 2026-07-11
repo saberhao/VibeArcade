@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>弹弹乐 Bumper Arena</title>
+<style>
+  :root{
+    --bg: linear-gradient(160deg,#D9EAD7 0%,#C9E4D2 55%,#E3F0DC 100%);
+    --surface:#FFFFFF; --line:#E6E0DB;
+    --t1:#4A4453; --t2:#7A7480; --t3:#A39DA8;
+    --p1:#5BB0E8; --p2:#F08FA8;
+    --accent:#8E7CC3;
+  }
+  *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html,body{ margin:0; height:100%; }
+  body{
+    background:var(--bg); color:var(--t1);
+    font-family: ui-sans-serif, system-ui, "PingFang SC", "Microsoft YaHei", sans-serif;
+    display:flex; flex-direction:column; height:100dvh; overflow:hidden;
+    user-select:none; -webkit-user-select:none; touch-action:none;
+  }
+  body.block{ font-family: ui-monospace, "Courier New", monospace; }
+
+  .topbar{
+    display:flex; align-items:center; gap:8px; padding:10px 12px;
+    border-bottom:1px solid var(--line); background:var(--surface);
+  }
+  .score{
+    flex:0 0 auto; min-width:64px; text-align:center; padding:6px 8px;
+    border:1px solid var(--line); border-radius:10px; font-weight:600;
+  }
+  .score .n{ font-size:20px; line-height:1; }
+  .score .l{ font-size:11px; color:var(--t3); margin-top:2px; }
+  .score.p1{ color:var(--p1); }
+  .score.p2{ color:var(--p2); }
+  .mid{ flex:1 1 auto; text-align:center; font-size:13px; color:var(--t2); }
+  .mid b{ color:var(--t1); }
+  .ctrls{ display:flex; gap:6px; }
+  button.tb{
+    appearance:none; border:1px solid var(--line); background:var(--surface);
+    color:var(--t1); border-radius:10px; padding:8px 10px; font-size:12px;
+    cursor:pointer; font-family:inherit;
+  }
+  button.tb:active{ background:var(--bg); }
+  button.tb.on{ border-color:var(--accent); color:var(--accent); }
+
+  .stage{ position:relative; flex:1 1 auto; min-height:0; display:flex; align-items:center; justify-content:center; }
+  canvas{ display:block; touch-action:none; }
+
+  .hint{
+    text-align:center; padding:10px 12px; font-size:13px; color:var(--t2);
+    border-top:1px solid var(--line); background:var(--surface);
+  }
+  .hint b{ color:var(--accent); }
+
+  .overlay{
+    position:absolute; inset:0; display:none; flex-direction:column;
+    align-items:center; justify-content:center; gap:14px;
+    background:rgba(216,234,214,.85);
+  }
+  .overlay.show{ display:flex; }
+  .overlay h1{ margin:0; font-size:26px; }
+  .overlay p{ margin:0; color:var(--t2); font-size:14px; }
+  .overlay button{
+    appearance:none; border:1px solid var(--accent); color:#fff; background:var(--accent);
+    border-radius:12px; padding:12px 22px; font-size:15px; cursor:pointer; font-family:inherit;
+  }
+
+  /* ===== 开始/设置页（与游戏大厅、点连三角形统一的深色风格） ===== */
+  #startScreen{
+    position:fixed; inset:0; z-index:100;
+    background:linear-gradient(135deg,#1a1a2e 0%,#16213e 50%,#0f3460 100%);
+    display:none; flex-direction:column; justify-content:center; align-items:center;
+    color:#fff; padding:20px; text-align:center;
+  }
+  #startScreen.show{ display:flex; }
+  #startScreen h1{
+    font-size:48px; margin:0 0 10px;
+    background:linear-gradient(135deg,#5BB0E8,#8E7CC3,#F08FA8);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  }
+  #startScreen > p{ color:#aaa; margin:0 0 30px; font-size:16px; }
+  .ss-panel{ display:flex; gap:40px; margin-bottom:30px; flex-wrap:wrap; justify-content:center; }
+  .ss-group{ display:flex; flex-direction:column; align-items:center; gap:10px; }
+  .ss-label{ font-size:14px; color:#888; }
+  .ss-select{ display:flex; gap:15px; }
+  .ss-btn{
+    min-width:82px; padding:14px 12px;
+    border:2px solid rgba(255,255,255,0.2); border-radius:16px;
+    background:rgba(255,255,255,0.1); color:#fff;
+    font-size:16px; font-weight:700; cursor:pointer; transition:all .3s ease;
+    display:flex; flex-direction:column; align-items:center; gap:4px; font-family:inherit;
+  }
+  .ss-btn span{ font-size:11px; color:#888; font-weight:400; }
+  .ss-btn:hover{ transform:translateY(-3px); border-color:#8E7CC3; background:rgba(142,124,195,0.2); }
+  .ss-btn.selected{ border-color:#8E7CC3; background:rgba(142,124,195,0.3); box-shadow:0 0 20px rgba(142,124,195,0.4); }
+  .ss-buttons{ display:flex; gap:15px; align-items:center; }
+  #ssStart{
+    padding:16px 48px; font-size:20px; font-weight:700; border:none; border-radius:30px;
+    background:linear-gradient(135deg,#8E7CC3,#6E5BA6); color:#fff; cursor:pointer; transition:all .3s ease; font-family:inherit;
+  }
+  #ssStart:hover{ transform:scale(1.05); box-shadow:0 10px 40px rgba(142,124,195,0.4); }
+  #ssRules{
+    padding:16px 28px; font-size:16px; font-weight:600;
+    border:1px solid rgba(255,255,255,0.2); border-radius:30px;
+    background:rgba(255,255,255,0.1); color:#bbb; cursor:pointer; transition:all .3s ease; font-family:inherit;
+  }
+  #ssRules:hover{ background:rgba(255,255,255,0.2); color:#fff; }
+  .ss-lobby{
+    margin-top:20px; padding:8px 20px; font-size:14px; font-weight:600;
+    border:1px solid rgba(255,255,255,0.2); border-radius:20px;
+    background:rgba(255,255,255,0.1); color:#bbb; cursor:pointer; transition:all .3s ease; font-family:inherit;
+  }
+  .ss-lobby:hover{ background:rgba(255,255,255,0.2); }
+  .ss-credit{ margin-top:30px; font-size:12px; color:#888; letter-spacing:1px; }
+
+  .ss-modal{
+    position:fixed; inset:0; z-index:120;
+    background:rgba(0,0,0,0.85); backdrop-filter:blur(5px);
+    display:none; justify-content:center; align-items:center; padding:20px;
+  }
+  .ss-modal.show{ display:flex; }
+  .ss-modal-box{
+    background:rgba(30,30,60,0.95); border:1px solid rgba(255,255,255,0.15);
+    border-radius:20px; padding:30px 40px; max-width:520px; width:100%; max-height:80vh; overflow-y:auto; color:#fff;
+  }
+  .ss-modal-box h2{
+    font-size:28px; margin:0 0 20px; text-align:center;
+    background:linear-gradient(135deg,#8E7CC3,#6E5BA6);
+    -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;
+  }
+  .ss-rules{ line-height:1.8; }
+  .ss-rules h3{ color:#8E7CC3; font-size:16px; margin:16px 0 8px; }
+  .ss-rules h3:first-child{ margin-top:0; }
+  .ss-rules p{ color:#ccc; font-size:14px; margin:0 0 6px; }
+  .ss-rules ul{ color:#bbb; font-size:14px; padding-left:20px; margin:0 0 8px; }
+  .ss-rules li{ margin-bottom:4px; }
+  #ssRulesClose{
+    display:block; margin:20px auto 0; padding:10px 36px; font-size:16px; font-weight:600;
+    border:none; border-radius:20px; background:linear-gradient(135deg,#8E7CC3,#6E5BA6); color:#fff; cursor:pointer; font-family:inherit;
+  }
+
+  @media (max-width:768px){
+    #startScreen h1{ font-size:34px; }
+    #startScreen > p{ font-size:14px; margin-bottom:22px; }
+    .ss-panel{ gap:22px; margin-bottom:24px; }
+    .ss-buttons{ flex-direction:column; width:80%; max-width:280px; }
+    #ssStart{ padding:14px 40px; font-size:18px; width:100%; }
+    #ssRules{ padding:12px 24px; font-size:15px; width:100%; }
+    .ss-modal-box{ padding:22px 20px; }
+  }
+
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="score p1"><div class="n" id="s1">0</div><div class="l">P1</div></div>
+    <div class="mid">回合 <b id="round">1</b> · <b id="mode">1P</b><br><span id="turn">你的回合</span></div>
+    <div class="score p2"><div class="n" id="s2">0</div><div class="l" id="p2l">AI</div></div>
+    <div class="ctrls">
+      <button class="tb" id="lobbyBtn" title="返回大厅">大厅</button>
+      <button class="tb" id="modeBtn" title="切换单人/双人">1P/2P</button>
+      <button class="tb" id="skinBtn" title="切换美术风格">可爱</button>
+      <button class="tb" id="resetBtn" title="重开">重开</button>
+    </div>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="cv"></canvas>
+    <div class="overlay" id="over">
+      <h1 id="overTitle">胜!</h1>
+      <p id="overSub"></p>
+      <button id="overBtn">再来一局</button>
+    </div>
+  </div>
+
+  <div class="hint" id="hint">拖角色<b>弹射</b> · 瞄准线=<b>落点预判</b> · 礁石很重会<b>撞动</b> · 能量满放<b>重击</b> · 赢家留原地</div>
+
+  <!-- 开始/设置页 -->
+  <div id="startScreen" class="show">
+    <h1>弹弹乐</h1>
+    <p>拖拽弹射撞飞对手，先得 3 分者获胜</p>
+    <div class="ss-panel">
+      <div class="ss-group">
+        <span class="ss-label">游戏模式</span>
+        <div class="ss-select">
+          <button class="ss-btn selected" data-mode="1p">单人<span>vs AI</span></button>
+          <button class="ss-btn" data-mode="2p">双人<span>面对面</span></button>
+        </div>
+      </div>
+      <div class="ss-group">
+        <span class="ss-label">美术风格</span>
+        <div class="ss-select">
+          <button class="ss-btn selected" data-skin="cute">可爱<span>圆润</span></button>
+          <button class="ss-btn" data-skin="block">方块<span>几何</span></button>
+        </div>
+      </div>
+    </div>
+    <div class="ss-buttons">
+      <button id="ssStart">开始游戏</button>
+      <button id="ssRules">游戏说明</button>
+    </div>
+    <button class="ss-lobby" id="ssLobby">&#127968; 返回大厅</button>
+    <div class="ss-credit">Made with &#9829; by Lulu &amp; Syuhoo &mdash; VibeArcade</div>
+  </div>
+
+  <!-- 游戏说明弹窗 -->
+  <div class="ss-modal" id="ssRulesModal">
+    <div class="ss-modal-box">
+      <h2>游戏说明</h2>
+      <div class="ss-rules">
+        <h3>游戏目标</h3>
+        <p>操控你的角色弹射撞击对手，把对方撞出竞技场边界即可得分，先得 3 分者获胜。</p>
+
+        <h3>基本操作</h3>
+        <ul>
+          <li>按住并拖动自己的角色，像弹弓一样蓄力</li>
+          <li>瞄准线会预判落点，松手即弹射</li>
+          <li>拉得越远力量越大，但过度蓄力会「过冲」偏向</li>
+        </ul>
+
+        <h3>竞技场与障碍</h3>
+        <ul>
+          <li>每次出手后竞技场会逐渐收缩，越到后面越危险</li>
+          <li>场上有木块与礁石，很重但会被撞动，可用于战术</li>
+        </ul>
+
+        <h3>能量重击</h3>
+        <p>命中对手会积累能量，能量满后本次弹射变为<strong>重击</strong>，威力更大。</p>
+
+        <h3>模式</h3>
+        <ul>
+          <li>单人：与 AI 对战</li>
+          <li>双人：同一设备轮流出手，面对面对战</li>
+        </ul>
+      </div>
+      <button id="ssRulesClose">知道了</button>
+    </div>
+  </div>
+
+
+<script>
+(() => {
+  "use strict";
+
+  // ---------- constants (all PLACEHOLDER, tune in playtest) ----------
+  const WORLD = 1000;          // virtual square world
+  const BLOB_R = 46;           // character radius
+  const BLOB_MASS = 1;         // bean-person mass (reference unit)
+  const FRICTION = 0.986;      // per-frame velocity decay (~60fps)
+  const MAX_POWER = 14;        // max launch speed (world units / frame)
+  const MIN_POWER = 2.4;       // min launch speed
+  const MAX_DRAG = 260;        // drag distance (world) for full power
+  const RESTITUTION = 0.85;    // momentum transfer on normal collision
+  const ARENA_R0 = 430;          // full arena radius — reset to this at the start of EVERY round
+  const ARENA_ROUND_MIN = 260;   // [PLACEHOLDER] smallest the arena gets within a single round
+  const ARENA_SHRINK_SHOT = 19;  // [PLACEHOLDER] arena shrinks this much after each launch; 9 shots → floor (430-260)/9≈19
+  const SHRINK_EASE = 0.30;      // [PLACEHOLDER] per-frame easing toward target radius (snappy close-in)
+  const SHRINK_FLASH = 30;       // [PLACEHOLDER] frames the ring flashes when it tightens
+  const SETTLE_SPEED = 0.55;   // below this both are "stopped"
+  const SETTLE_TIMEOUT = 170;  // frames before forcing resolve
+  const MIN_MOVE_FRAMES = 8;   // grace frames before settle check
+  const WIN_SCORE = 3;
+  const AI_DELAY = 42;         // frames AI "thinks" before launch
+  const AI_ERR = 0.09;         // [PLACEHOLDER] AI aim error (rad) — was 0.20
+  const KO_FRAMES = 120;       // [PLACEHOLDER] KO pause frames (~2s @ 60fps) before resolving
+
+  // --- obstacle systems (all tunable) ---
+  const OBSTACLE_COUNT_MIN = 4;  // [PLACEHOLDER] min obstacles per match
+  const OBSTACLE_COUNT_MAX = 6;  // [PLACEHOLDER] max obstacles per match
+  const OBSTACLE_R_MIN = 22;   // [PLACEHOLDER] min obstacle radius (<= BLOB_R so area <= bean)
+  const OBSTACLE_R_MAX = 46;   // [PLACEHOLDER] max obstacle radius (== BLOB_R → area == bean)
+  const OBSTACLE_PAD = 26;     // [PLACEHOLDER] min clear gap between obstacle edges (world units)
+  const OBSTACLE_MASS = 2;     // [PLACEHOLDER] obstacle mass = 2x bean → heavy, moves little
+  const OBSTACLE_FRICTION = 0.90; // [PLACEHOLDER] obstacles settle faster than beans
+  const OBS_REST = 0.7;        // [PLACEHOLDER] obstacle bounce restitution
+  const OBS_BOUND_REST = 0.4;  // [PLACEHOLDER] obstacle bounce off arena edge
+
+  // --- energy / heavy strike ---
+  const ENERGY_MAX = 100;
+  const HIT_GAIN = 38;         // [PLACEHOLDER] energy gained per clean hit
+  const HEAVY_MULT = 1.7;      // [PLACEHOLDER] heavy strike launch-speed multiplier
+  const HEAVY_REST = 1.05;     // [PLACEHOLDER] heavy strike collision restitution
+
+  // --- overcharge risk ---
+  const OVERCHARGE_THRESH = 0.90; // [PLACEHOLDER] fraction of MAX_POWER that triggers slip
+  const OVERCHARGE_JIT = 0.16;    // [PLACEHOLDER] rad of random angle slip when overcharged
+
+  // ---------- skins ----------
+  const SKINS = {
+    cute: {
+      arenaFill:"#CDEBDD", arenaLine:"#9B8BC4", arenaDash:"#C9BEE0",
+      p1:{fill:"#7FC8E8", eye:"#FFFFFF", pup:"#4A4453"},
+      p2:{fill:"#F6B3C6", eye:"#FFFFFF", pup:"#4A4453"},
+      active:"#8E7CC3", aim:"#8E7CC3", energy:"#8E7CC3", heavy:"#F2C14E"
+    },
+    block: {
+      arenaFill:"#B5EAD7", arenaLine:"#6E5BA6", arenaDash:"#9B8BC4",
+      p1:{fill:"#5BC0BE", eye:"#FFFFFF", pup:"#4A4453"},
+      p2:{fill:"#F08FA8", eye:"#FFFFFF", pup:"#4A4453"},
+      active:"#6E5BA6", aim:"#6E5BA6", energy:"#6E5BA6", heavy:"#F2C14E"
+    }
+  };
+
+  // ---------- state ----------
+  const cv = document.getElementById("cv");
+  const ctx = cv.getContext("2d");
+  const stage = document.getElementById("stage");
+
+  let skin = "cute";
+  let twoPlayer = false;
+  let mode = { label:"1P", p2:"AI" };
+
+  let blobs = [mkBlob(0), mkBlob(1)];
+  let arenaR = ARENA_R0;       // current (animated) arena radius — used for physics + render
+  let targetArenaR = ARENA_R0; // radius the arena is easing toward (set on score, reached smoothly)
+  let shotsSinceShrink = 0;    // counts launches; arena shrinks only every 2nd launch
+  let round = 1;
+  let scores = [0,0];
+  let active = 0;               // whose turn (0=P1, 1=P2/AI)
+  let phase = "aim";            // aim | moving | matchover
+  let framesSinceLaunch = 0;
+  let aiTimer = 0;
+  let aim = null;               // {ox,oy,px,py,power,dirx,diry} while dragging
+  let pulse = 0;
+  let shrinkFlash = 0;          // frames remaining of the "tightening" ring flash
+
+  // challenge-state
+  let obstacles = [];           // [{x,y,r,type,vx,vy}] movable heavy rocks in world coords
+  let energy = [0,0];           // 0..ENERGY_MAX
+  let heavyActive = false;      // current launch is a heavy strike
+  let hitRegistered = false;    // ensure +energy only once per launch
+  let koActive = false;         // KO pause in progress (showing the knockout)
+  let koTimer = 0;              // frames remaining in KO pause
+
+  function mkBlob(i){ return { x:0, y:0, vx:0, vy:0, alive:true, owner:i }; }
+  function center(){ return { x:WORLD/2, y:WORLD/2 }; }
+  // half-extent of the arena BOUNDARY for the current skin.
+  // circle mode: radius == arenaR. block mode: the SQUARE has half-extent == arenaR, i.e. it
+  // CONTAINS the circle — its four edges sit exactly on the circle's radius, so they close in at
+  // the same rate as the ring, while the corners extend a little further (bigger play area).
+  function arenaHalf(){ return arenaR; }
+
+  // ---------- sfx (WebAudio, no asset files) ----------
+  let actx = null;
+  function audio(){
+    if(!actx){ try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){ actx = null; } }
+    return actx;
+  }
+  function blip(freq, dur, type, vol){
+    const a = audio(); if(!a) return;
+    const o = a.createOscillator(), g = a.createGain();
+    o.type = type || "sine"; o.frequency.value = freq;
+    o.connect(g); g.connect(a.destination);
+    const t = a.currentTime;
+    g.gain.setValueAtTime(vol || 0.1, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + (dur || 0.12));
+    o.start(t); o.stop(t + (dur || 0.12));
+  }
+
+  // ---------- layout / resize ----------
+  let scale = 1, dpr = 1;
+  function resize(){
+    const w = stage.clientWidth, h = stage.clientHeight;
+    const size = Math.max(120, Math.min(w, h));
+    dpr = window.devicePixelRatio || 1;
+    cv.style.width = size + "px";
+    cv.style.height = size + "px";
+    cv.width = Math.round(size * dpr);
+    cv.height = Math.round(size * dpr);
+    scale = (size * dpr) / WORLD;
+    ctx.setTransform(scale, 0, 0, scale, 0, 0);
+  }
+  window.addEventListener("resize", resize);
+
+  // ---------- match flow ----------
+  function genObstacles(){
+    // movable heavy rocks stored in absolute world coords; never melt, never overlap
+    obstacles = [];
+    const c = center();
+    // GUARANTEED wood block exactly between the two beans (dead center, on the spawn axis)
+    const CB_R = 48;   // [PLACEHOLDER] center wood-block radius
+    obstacles.push({ x: c.x, y: c.y, r: CB_R, type: "block", vx:0, vy:0 });
+    const target = OBSTACLE_COUNT_MIN + Math.floor(Math.random()*(OBSTACLE_COUNT_MAX - OBSTACLE_COUNT_MIN + 1));
+    let tries = 0;
+    while(obstacles.length < target && tries < 400){
+      tries++;
+      const a = Math.random()*Math.PI*2;
+      const rr = 0.24 + Math.random()*0.24;          // 0.24..0.48 of arenaR (stay clear of the center block)
+      const r = OBSTACLE_R_MIN + Math.random()*(OBSTACLE_R_MAX - OBSTACLE_R_MIN);
+      const type = Math.random() < 0.5 ? "round" : "block";
+      const x = c.x + Math.cos(a)*arenaR*rr;
+      const y = c.y + Math.sin(a)*arenaR*rr;
+      const cand = { x, y, r, type, vx:0, vy:0 };
+      // keep clear of the two spawn points (x = ±0.52R, y = 0)
+      const d0 = Math.hypot(x - (c.x - arenaR*0.52), y - c.y);
+      const d1 = Math.hypot(x - (c.x + arenaR*0.52), y - c.y);
+      if(d0 < r + BLOB_R + 30 || d1 < r + BLOB_R + 30) continue;
+      // exact non-overlap check against already placed rocks (incl. center block), with padding gap
+      let ok = true;
+      for(const o of obstacles){
+        if(Math.hypot(x - o.x, y - o.y) < r + o.r + OBSTACLE_PAD){ ok = false; break; }
+      }
+      if(ok) obstacles.push(cand);
+    }
+  }
+
+  function placeBlobs(){
+    const c = center();
+    const d = arenaR * 0.52;
+    blobs[0].x = c.x - d; blobs[0].y = c.y;
+    blobs[1].x = c.x + d; blobs[1].y = c.y;
+    for(const b of blobs){ b.vx=0; b.vy=0; b.alive=true; }
+  }
+  function startMatch(){
+    scores = [0,0]; round = 1; arenaR = ARENA_R0; targetArenaR = ARENA_R0; shrinkFlash = 0; shotsSinceShrink = 0;
+    energy = [0,0]; heavyActive = false; hitRegistered = false;
+    koActive = false; koTimer = 0;
+    active = 0; phase = "aim"; framesSinceLaunch = 0; aiTimer = 0; aim = null;
+    genObstacles();
+    placeBlobs();
+    hideOverlay(); updateHUD();
+  }
+  function clampInside(b){
+    // never let the shrinking arena pop a still-standing blob out of bounds
+    if(!b.alive) return;
+    const c = center();
+    if(skin === "cute"){
+      const maxD = arenaR - BLOB_R - 4;
+      const d = Math.hypot(b.x - c.x, b.y - c.y);
+      if(d > maxD){
+        const a = Math.atan2(b.y - c.y, b.x - c.x);
+        b.x = c.x + Math.cos(a)*maxD;
+        b.y = c.y + Math.sin(a)*maxD;
+      }
+    } else {
+      // block mode: SQUARE inscribed in the circle — clamp each axis
+      // so the whole bean stays inside; the boundary closes in at the same rate as the circle.
+      const maxD = arenaHalf() - BLOB_R - 4;
+      b.x = Math.max(c.x - maxD, Math.min(c.x + maxD, b.x));
+      b.y = Math.max(c.y - maxD, Math.min(c.y + maxD, b.y));
+    }
+  }
+  function respawn(b){
+    // bring a knocked-out blob back in, mirrored across center from the opponent
+    const c = center();
+    const opp = blobs[1 - b.owner];
+    let dx = c.x - opp.x, dy = c.y - opp.y;
+    const d = Math.hypot(dx, dy) || 1;
+    const dist = Math.min(arenaR * 0.52, d);
+    b.x = c.x + (dx/d) * dist;
+    b.y = c.y + (dy/d) * dist;
+    b.vx = 0; b.vy = 0; b.alive = true;
+  }
+  function respawnBoth(){
+    const c = center();
+    const d = arenaR * 0.52;
+    blobs[0].x = c.x - d; blobs[0].y = c.y;
+    blobs[1].x = c.x + d; blobs[1].y = c.y;
+    for(const b of blobs){ b.vx = 0; b.vy = 0; b.alive = true; }
+  }
+  function resolveRound(){
+    koActive = false; koTimer = 0;
+    const out0 = !blobs[0].alive, out1 = !blobs[1].alive;
+    const someoneScored = out0 || out1;
+    if(out0 && out1){ respawnBoth(); }                              // draw: re-serve both
+    else {
+      if(out0){ scores[1]++; respawn(blobs[0]); }                  // only the knocked-out blob re-enters
+      if(out1){ scores[0]++; respawn(blobs[1]); }                   // winner stays exactly where it landed
+    }
+    if(scores[0] >= WIN_SCORE || scores[1] >= WIN_SCORE){ matchOver(); return; }
+    if(someoneScored){
+      // NEW ROUND → arena resets to full size (eases back up smoothly during next aim)
+      targetArenaR = ARENA_R0;
+      shotsSinceShrink = 0;
+      round++;
+    }
+    // if nobody scored, just pass the turn — the arena KEEPS its shrunk size (set on each launch),
+    // so it tightens a little more on the next shot instead of snapping back to full.
+    active = 1 - active;                 // alternate serve (no full reset of positions)
+    phase = "aim"; framesSinceLaunch = 0; aiTimer = 0; aim = null;
+    heavyActive = false; hitRegistered = false;
+    // clear residual velocity so a blob never drifts on its own on the next turn
+    for(const b of blobs){ b.vx = 0; b.vy = 0; }
+    for(const o of obstacles){ o.vx = 0; o.vy = 0; }
+    updateHUD();
+  }
+  function matchOver(){
+    phase = "matchover";
+    const p1win = scores[0] > scores[1];
+    let title, sub;
+    if(twoPlayer){ title = p1win ? "P1 胜!" : "P2 胜!"; }
+    else { title = p1win ? "你赢了!" : "AI 赢了"; }
+    sub = `比分 ${scores[0]} : ${scores[1]}`;
+    showOverlay(title, sub);
+  }
+
+  // ---------- arena shrink animation (smooth, never a snap) ----------
+  function animateArena(){
+    // tighten / reset only while the player is aiming the NEXT shot — never mid-flight,
+    // so the closing ring can never accidentally pop a bean that's still in motion.
+    if(phase !== "aim") return;
+    if(Math.abs(arenaR - targetArenaR) > 0.4){
+      arenaR += (targetArenaR - arenaR) * SHRINK_EASE;
+      clampInside(blobs[0]); clampInside(blobs[1]);   // keep beans safely inside as the ring moves
+      for(const o of obstacles) clampObstacle(o);
+      // re-separate rocks that the closing ring nudged together
+      for(let i=0;i<obstacles.length;i++){
+        for(let k=i+1;k<obstacles.length;k++){
+          const A=obstacles[i], B=obstacles[k];
+          const dx=B.x-A.x, dy=B.y-A.y;
+          const dist=Math.hypot(dx,dy)||0.0001;
+          const minD=A.r+B.r;
+          if(dist<minD){
+            const nx=dx/dist, ny=dy/dist, push=(minD-dist)/2;
+            A.x-=nx*push; A.y-=ny*push;
+            B.x+=nx*push; B.y+=ny*push;
+          }
+        }
+      }
+      // the closing ring can shove a rock onto an idle blob; separate them during aim so the
+      // rock never mysteriously flings the player on the next shot. Skip the blob the player
+      // is currently dragging so we don't yank it out from under their finger.
+      for(const o of obstacles){
+        for(const b of blobs){
+          if(!b.alive) continue;
+          if(aim && b === blobs[active]) continue;
+          const dx = o.x - b.x, dy = o.y - b.y;
+          const dist = Math.hypot(dx, dy) || 0.0001;
+          const minD = o.r + BLOB_R;
+          if(dist < minD){
+            const nx = dx/dist, ny = dy/dist, push = minD - dist;
+            b.x -= nx*push; b.y -= ny*push;   // push the idle blob inward, keep the rock pinned at the ring
+          }
+        }
+      }
+    } else {
+      arenaR = targetArenaR;
+    }
+    if(shrinkFlash > 0) shrinkFlash--;
+  }
+
+  // ---------- input (pointer = mouse + touch) ----------
+  function toWorld(e){
+    const r = cv.getBoundingClientRect();
+    return {
+      x: (e.clientX - r.left) / r.width * WORLD,
+      y: (e.clientY - r.top) / r.height * WORLD
+    };
+  }
+  function isHumanTurn(){ return twoPlayer ? true : (active === 0); }
+
+  cv.addEventListener("pointerdown", (e) => {
+    if(phase !== "aim" || !isHumanTurn()) return;
+    if(Math.abs(arenaR - targetArenaR) > 0.4) return;  // wait until the ring finishes tightening
+    const p = toWorld(e);
+    const b = blobs[active];
+    if(Math.hypot(p.x - b.x, p.y - b.y) <= BLOB_R * 1.6){
+      cv.setPointerCapture(e.pointerId);
+      aim = { ox:b.x, oy:b.y, px:p.x, py:p.y, power:0, dirx:0, diry:0 };
+    }
+  });
+  cv.addEventListener("pointermove", (e) => {
+    if(!aim) return;
+    const p = toWorld(e);
+    aim.px = p.x; aim.py = p.y;
+    const dx = aim.ox - p.x, dy = aim.oy - p.y;     // slingshot: pull back
+    const dist = Math.hypot(dx, dy);
+    const cl = Math.min(dist, MAX_DRAG);
+    aim.power = MIN_POWER + (cl / MAX_DRAG) * (MAX_POWER - MIN_POWER);
+    if(dist > 0.001){ aim.dirx = dx/dist; aim.diry = dy/dist; }
+  });
+  function release(){
+    if(!aim) return;
+    const b = blobs[active];
+    let dx = aim.dirx, dy = aim.diry, pw = aim.power;
+    if(pw >= MIN_POWER && (dx || dy)){
+      // overcharge slip: pulling past threshold risks a random angle kick
+      if(pw > MAX_POWER * OVERCHARGE_THRESH){
+        const j = (Math.random()*2 - 1) * OVERCHARGE_JIT;
+        const a = Math.atan2(dy, dx) + j;
+        dx = Math.cos(a); dy = Math.sin(a);
+      }
+      const heavy = energy[active] >= ENERGY_MAX;
+      if(heavy){ pw *= HEAVY_MULT; energy[active] = 0; heavyActive = true; }
+      else { heavyActive = false; }
+      b.vx = dx * pw; b.vy = dy * pw;
+      hitRegistered = false;
+      // arena tightens once every 2 launches (eases during the next aim)
+      shotsSinceShrink++;
+      if(shotsSinceShrink >= 2){
+        targetArenaR = Math.max(ARENA_ROUND_MIN, targetArenaR - ARENA_SHRINK_SHOT);
+        shrinkFlash = SHRINK_FLASH;
+        shotsSinceShrink = 0;
+      }
+    }
+    aim = null;
+    phase = "moving"; framesSinceLaunch = 0; updateHUD();
+  }
+  cv.addEventListener("pointerup", release);
+  cv.addEventListener("pointercancel", () => { aim = null; });
+
+  // ---------- AI ----------
+  function aiLaunch(){
+    const me = blobs[1], opp = blobs[0];
+    let ang = Math.atan2(opp.y - me.y, opp.x - me.x);
+    ang += (Math.random()*2 - 1) * AI_ERR;
+    // edge self-save — use the right "near edge" metric for the current arena shape
+    const c = center();
+    const nearEdge = skin === "cute"
+      ? Math.hypot(me.x - c.x, me.y - c.y) > arenaR * 0.60
+      : Math.max(Math.abs(me.x - c.x), Math.abs(me.y - c.y)) > arenaHalf() * 0.60;
+    if(nearEdge){
+      const ca = Math.atan2(c.y - me.y, c.x - me.x);
+      ang = ang * 0.5 + ca * 0.5;
+    }
+    const heavy = energy[1] >= ENERGY_MAX;
+    const pw = heavy ? MAX_POWER * 0.99
+                     : MIN_POWER + (0.66 + Math.random()*0.3) * (MAX_POWER - MIN_POWER);
+    me.vx = Math.cos(ang)*pw; me.vy = Math.sin(ang)*pw;
+    if(heavy){ heavyActive = true; energy[1] = 0; } else heavyActive = false;
+    hitRegistered = false;
+    // arena tightens a little after each launch (eases during the next aim)
+    targetArenaR = Math.max(ARENA_ROUND_MIN, targetArenaR - ARENA_SHRINK_SHOT);
+    shrinkFlash = SHRINK_FLASH;
+  }
+
+  // ---------- physics ----------
+  function updateObstacles(){
+    const c = center();
+    for(const o of obstacles){
+      o.x += o.vx; o.y += o.vy;
+      o.vx *= OBSTACLE_FRICTION; o.vy *= OBSTACLE_FRICTION;
+      if(Math.abs(o.vx) < 0.02) o.vx = 0;
+      if(Math.abs(o.vy) < 0.02) o.vy = 0;
+      // keep inside arena: clamp to edge and bounce
+      clampObstacle(o);
+    }
+    // obstacle vs obstacle: separate so they never overlap after being shoved
+    for(let i=0;i<obstacles.length;i++){
+      for(let k=i+1;k<obstacles.length;k++){
+        const A=obstacles[i], B=obstacles[k];
+        const dx=B.x-A.x, dy=B.y-A.y;
+        const dist=Math.hypot(dx,dy)||0.0001;
+        const minD=A.r+B.r;
+        if(dist<minD){
+          const nx=dx/dist, ny=dy/dist;
+          const push=(minD-dist)/2;
+          A.x-=nx*push; A.y-=ny*push;
+          B.x+=nx*push; B.y+=ny*push;
+        }
+      }
+    }
+  }
+  function clampObstacle(o){
+    const c = center();
+    if(skin === "cute"){
+      const maxD = arenaR - o.r - 2;
+      const dx = o.x - c.x, dy = o.y - c.y;
+      const d = Math.hypot(dx, dy) || 0.0001;
+      if(d > maxD){
+        const nx = dx/d, ny = dy/d;
+        o.x = c.x + nx*maxD; o.y = c.y + ny*maxD;
+        const vn = o.vx*nx + o.vy*ny;
+        if(vn > 0){ o.vx -= (1 + OBS_BOUND_REST)*vn*nx; o.vy -= (1 + OBS_BOUND_REST)*vn*ny; }
+      }
+    } else {
+      // block mode: SQUARE inscribed in the circle — clamp + bounce each axis
+      const maxD = arenaHalf() - o.r - 2;
+      if(o.x > c.x + maxD){ const vn = o.vx; o.x = c.x + maxD; if(vn > 0) o.vx -= (1 + OBS_BOUND_REST)*vn; }
+      else if(o.x < c.x - maxD){ const vn = o.vx; o.x = c.x - maxD; if(vn < 0) o.vx -= (1 + OBS_BOUND_REST)*vn; }
+      if(o.y > c.y + maxD){ const vn = o.vy; o.y = c.y + maxD; if(vn > 0) o.vy -= (1 + OBS_BOUND_REST)*vn; }
+      else if(o.y < c.y - maxD){ const vn = o.vy; o.y = c.y - maxD; if(vn < 0) o.vy -= (1 + OBS_BOUND_REST)*vn; }
+    }
+  }
+
+  function step(){
+    // pause the simulation while the start/settings screen is open (no AI sneak-launch behind it)
+    if(el("startScreen").classList.contains("show")){ pulse += 0.08; return; }
+    animateArena();
+    const shrinking = Math.abs(arenaR - targetArenaR) > 0.4;
+    if(phase === "moving"){
+      for(const b of blobs){
+        if(!b.alive) continue;            // dead blobs don't move/collide
+        b.x += b.vx; b.y += b.vy;
+        b.vx *= FRICTION; b.vy *= FRICTION;
+        if(Math.abs(b.vx) < 0.02) b.vx = 0;
+        if(Math.abs(b.vy) < 0.02) b.vy = 0;
+      }
+      updateObstacles();
+      for(const b of blobs){ if(b.alive) collideObstacles(b); }
+      collide();
+      const c = center();
+      for(const b of blobs){
+        if(b.alive){
+          let out;
+          if(skin === "cute"){
+            const d = Math.hypot(b.x - c.x, b.y - c.y);
+            // only out when the WHOLE blob has left the ring — if even a pixel is still inside, it's safe
+            out = d > arenaR + BLOB_R;
+          } else {
+            // block mode: SQUARE inscribed in the circle so its corners
+            // touch the circle rim — out only when the WHOLE square bean is past an edge, mirroring
+            // the circle rule exactly, and the boundary closes in at the same rate.
+            const h = arenaHalf();
+            out = (b.x - BLOB_R > c.x + h) || (b.x + BLOB_R < c.x - h) ||
+                  (b.y - BLOB_R > c.y + h) || (b.y + BLOB_R < c.y - h);
+          }
+          if(out) b.alive = false;
+        }
+      }
+      framesSinceLaunch++;
+      const maxSp = Math.max(Math.hypot(blobs[0].vx,blobs[0].vy), Math.hypot(blobs[1].vx,blobs[1].vy));
+      const settled = framesSinceLaunch > MIN_MOVE_FRAMES && maxSp < SETTLE_SPEED;
+      const someoneOut = !blobs[0].alive || !blobs[1].alive;
+      // KO pause: once someone is out, freeze the scene ~2s so the player sees the knockout
+      if(someoneOut && !koActive){
+        koActive = true; koTimer = KO_FRAMES;
+        for(const b of blobs){ b.vx = 0; b.vy = 0; }
+        for(const o of obstacles){ o.vx = 0; o.vy = 0; }
+        blip(160, 0.30, "sawtooth", 0.12);   // KO feedback
+      }
+      if(koActive){
+        koTimer--;
+        if(koTimer <= 0){ koActive = false; resolveRound(); }
+        pulse += 0.08;
+        return;
+      }
+      if(settled || framesSinceLaunch > SETTLE_TIMEOUT){ resolveRound(); }
+    } else if(phase === "aim" && !twoPlayer && active === 1){
+      if(!shrinking){ aiTimer++; if(aiTimer > AI_DELAY){ aiLaunch(); phase = "moving"; framesSinceLaunch = 0; updateHUD(); } }
+    }
+    pulse += 0.08;
+  }
+
+  function collide(){
+    const a = blobs[0], b = blobs[1];
+    if(!a.alive || !b.alive) return;
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const dist = Math.hypot(dx, dy) || 0.0001;
+    const minD = BLOB_R * 2;
+    if(dist < minD){
+      const nx = dx/dist, ny = dy/dist;
+      const overlap = (minD - dist) / 2;
+      a.x -= nx*overlap; a.y -= ny*overlap;
+      b.x += nx*overlap; b.y += ny*overlap;
+      const va = a.vx*nx + a.vy*ny;
+      const vb = b.vx*nx + b.vy*ny;
+      if(va - vb > 0){
+        const rest = heavyActive ? HEAVY_REST : RESTITUTION;
+        const na = (va*(1 - rest) + vb*(1 + rest)) / 2;
+        const nb = (va*(1 + rest) + vb*(1 - rest)) / 2;
+        a.vx += (na - va)*nx; a.vy += (na - va)*ny;
+        b.vx += (nb - vb)*nx; b.vy += (nb - vb)*ny;
+        // award energy to the active launcher on a clean hit
+        if(!hitRegistered){
+          energy[active] = Math.min(ENERGY_MAX, energy[active] + HIT_GAIN);
+          hitRegistered = true;
+          blip(520, 0.09, "triangle", 0.10);   // hit feedback
+        }
+      }
+    }
+  }
+
+  function collideObstacles(b){
+    for(const o of obstacles){
+      const dx = b.x - o.x, dy = b.y - o.y;
+      const dist = Math.hypot(dx, dy) || 0.0001;
+      const minD = BLOB_R + o.r;
+      if(dist < minD){
+        const nx = dx/dist, ny = dy/dist;
+        const overlap = minD - dist;
+        const invB = 1/BLOB_MASS, invO = 1/OBSTACLE_MASS;
+        const tot = invB + invO;
+        // positional correction weighted by inverse mass (heavy rock moves less)
+        b.x += nx * overlap * (invB/tot);
+        b.y += ny * overlap * (invB/tot);
+        o.x -= nx * overlap * (invO/tot);
+        o.y -= ny * overlap * (invO/tot);
+        const rvx = b.vx - o.vx, rvy = b.vy - o.vy;
+        const vn = rvx*nx + rvy*ny;
+        if(vn < 0){                                  // approaching → exchange momentum
+          const e = OBS_REST;
+          const j = -(1 + e) * vn / tot;
+          b.vx += j * invB * nx; b.vy += j * invB * ny;
+          o.vx -= j * invO * nx; o.vy -= j * invO * ny;
+        }
+      }
+    }
+  }
+
+  // ---------- render ----------
+  function roundRect(x, y, w, h, rad){
+    ctx.beginPath();
+    ctx.moveTo(x+rad, y);
+    ctx.arcTo(x+w, y, x+w, y+h, rad);
+    ctx.arcTo(x+w, y+h, x, y+h, rad);
+    ctx.arcTo(x, y+h, x, y, rad);
+    ctx.arcTo(x, y, x+w, y, rad);
+    ctx.closePath();
+  }
+  function predictPath(ox, oy, dx, dy, pw){
+    // pure trajectory (no wind): same friction model, so the line shows the real landing arc
+    let x = ox, y = oy, vx = dx*pw, vy = dy*pw;
+    const pts = [[x, y]];
+    for(let i=0;i<48;i++){
+      x += vx; y += vy;
+      vx *= FRICTION; vy *= FRICTION;
+      pts.push([x, y]);
+      if(Math.hypot(vx, vy) < 0.6) break;
+    }
+    return pts;
+  }
+  function draw(){
+    const c = center();
+    const sk = SKINS[skin];
+    const flash = shrinkFlash > 0;   // ring glows while the arena is tightening
+    ctx.clearRect(0,0,WORLD,WORLD);
+
+    // arena
+    if(skin === "cute"){
+      ctx.fillStyle = sk.arenaFill;
+      ctx.beginPath(); ctx.arc(c.x, c.y, arenaR, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = sk.arenaDash; ctx.lineWidth = 3; ctx.setLineDash([6,10]);
+      ctx.beginPath(); ctx.arc(c.x, c.y, arenaR*0.66, 0, Math.PI*2); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.strokeStyle = sk.arenaLine;
+      if(flash){ ctx.save(); ctx.shadowColor = sk.active; ctx.shadowBlur = 16; }
+      ctx.lineWidth = flash ? 7 : 4;
+      ctx.beginPath(); ctx.arc(c.x, c.y, arenaR, 0, Math.PI*2); ctx.stroke();
+      if(flash) ctx.restore();
+    } else {
+      const h = arenaHalf();
+      const s = h*2;
+      ctx.fillStyle = sk.arenaFill;
+      ctx.fillRect(c.x-h, c.y-h, s, s);
+      ctx.strokeStyle = sk.arenaDash; ctx.lineWidth = 2; ctx.setLineDash([8,8]);
+      ctx.strokeRect(c.x-h*0.66, c.y-h*0.66, h*1.32, h*1.32);
+      ctx.setLineDash([]);
+      ctx.strokeStyle = sk.arenaLine;
+      if(flash){ ctx.save(); ctx.shadowColor = sk.active; ctx.shadowBlur = 16; }
+      ctx.lineWidth = flash ? 8 : 5;
+      ctx.strokeRect(c.x-h, c.y-h, s, s);
+      if(flash) ctx.restore();
+    }
+
+    drawObstacles(sk);
+
+    // aim preview: solid predicted landing arc
+    if(aim && (aim.dirx || aim.diry)){
+      const over = aim.power > MAX_POWER * OVERCHARGE_THRESH;
+      const col = over ? sk.heavy : sk.aim;
+      const pts = predictPath(aim.ox, aim.oy, aim.dirx, aim.diry, aim.power);
+      ctx.strokeStyle = col; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(pts[0][0], pts[0][1]);
+      for(let i=1;i<pts.length;i++) ctx.lineTo(pts[i][0], pts[i][1]);
+      ctx.stroke();
+      const last = pts[pts.length-1], prev = pts[Math.max(0, pts.length-2)];
+      const a = Math.atan2(last[1]-prev[1], last[0]-prev[0]);
+      ctx.fillStyle = col;
+      ctx.beginPath();
+      ctx.moveTo(last[0], last[1]);
+      ctx.lineTo(last[0]-16*Math.cos(a-0.4), last[1]-16*Math.sin(a-0.4));
+      ctx.lineTo(last[0]-16*Math.cos(a+0.4), last[1]-16*Math.sin(a+0.4));
+      ctx.closePath(); ctx.fill();
+      if(over){
+        ctx.fillStyle = sk.heavy; ctx.font = "bold 18px sans-serif"; ctx.textAlign = "center";
+        ctx.fillText("过冲!", aim.ox, aim.oy - BLOB_R - 14);
+      }
+    }
+
+    drawBlob(blobs[0], sk.p1, sk);
+    drawBlob(blobs[1], sk.p2, sk);
+    drawEnergy(blobs[0], sk);
+    drawEnergy(blobs[1], sk);
+
+    // KO banner
+    if(koActive){
+      ctx.save();
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = sk.active; ctx.font = "bold 60px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("出局!", WORLD/2, WORLD/2 - 16);
+      ctx.restore();
+    }
+  }
+
+  function drawObstacles(sk){
+    for(const o of obstacles){
+      const r = o.r;
+      if(o.type === "block"){
+        // wood block (木块) — warm caramel macaron so it reads as wood, not rock
+        if(skin === "cute"){
+          ctx.fillStyle = "#EBD2A8"; roundRect(o.x-r, o.y-r, r*2, r*2, 14); ctx.fill();
+          ctx.strokeStyle = "#C49A63"; ctx.lineWidth = 3; roundRect(o.x-r, o.y-r, r*2, r*2, 14); ctx.stroke();
+        } else {
+          ctx.fillStyle = "#D9B483"; ctx.fillRect(o.x-r, o.y-r, r*2, r*2);
+          ctx.strokeStyle = "#9C7440"; ctx.lineWidth = 4; ctx.strokeRect(o.x-r, o.y-r, r*2, r*2);
+        }
+      } else {
+        if(skin === "cute"){
+          ctx.fillStyle = "#C2D4E8";
+          ctx.beginPath(); ctx.arc(o.x, o.y, r, 0, Math.PI*2); ctx.fill();
+          ctx.strokeStyle = "#7E97B0"; ctx.lineWidth = 3; ctx.stroke();
+          ctx.fillStyle = "#7E97B0";
+          ctx.beginPath(); ctx.arc(o.x-r*0.3, o.y-r*0.22, r*0.13, 0, Math.PI*2); ctx.fill();
+          ctx.beginPath(); ctx.arc(o.x+r*0.26, o.y+r*0.18, r*0.11, 0, Math.PI*2); ctx.fill();
+        } else {
+          ctx.fillStyle = "#8FB0D0";
+          ctx.beginPath(); ctx.arc(o.x, o.y, r, 0, Math.PI*2); ctx.fill();
+          ctx.strokeStyle = "#4A6A88"; ctx.lineWidth = 4; ctx.stroke();
+        }
+      }
+    }
+  }
+
+  function drawBlob(b, col, sk){
+    if(!b.alive){
+      // KO marker: sad crying ghost face (square in block mode, circle in cute mode)
+      ctx.save();
+      ctx.globalAlpha = 0.92;
+      ctx.fillStyle = "rgba(150,150,165,0.32)";
+      ctx.strokeStyle = "#8A8A95"; ctx.lineWidth = 4;
+      if(skin === "cute"){
+        ctx.beginPath(); ctx.arc(b.x, b.y, BLOB_R, 0, Math.PI*2); ctx.fill(); ctx.stroke();
+      } else {
+        ctx.fillRect(b.x-BLOB_R, b.y-BLOB_R, BLOB_R*2, BLOB_R*2);
+        ctx.strokeRect(b.x-BLOB_R, b.y-BLOB_R, BLOB_R*2, BLOB_R*2);
+      }
+      // X eyes (crying)
+      ctx.strokeStyle = "#5A5A66"; ctx.lineWidth = 4;
+      const xe = 14, xs = 9;
+      ctx.beginPath();
+      ctx.moveTo(b.x-xe-xs, b.y-10-xs); ctx.lineTo(b.x-xe+xs, b.y-10+xs);
+      ctx.moveTo(b.x-xe+xs, b.y-10-xs); ctx.lineTo(b.x-xe-xs, b.y-10+xs);
+      ctx.moveTo(b.x+xe-xs, b.y-10-xs); ctx.lineTo(b.x+xe+xs, b.y-10+xs);
+      ctx.moveTo(b.x+xe+xs, b.y-10-xs); ctx.lineTo(b.x+xe-xs, b.y-10+xs);
+      ctx.stroke();
+      // frown mouth (∩ shape)
+      ctx.beginPath(); ctx.arc(b.x, b.y+22, 13, Math.PI, Math.PI*2); ctx.stroke();
+      // tears (square pixels in block mode, droplets in cute)
+      ctx.fillStyle = "#7FB7E8";
+      if(skin === "cute"){
+        ctx.beginPath(); ctx.moveTo(b.x-xe-3, b.y+2); ctx.lineTo(b.x-xe+3, b.y+2); ctx.lineTo(b.x-xe, b.y+14); ctx.closePath(); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(b.x+xe-3, b.y+2); ctx.lineTo(b.x+xe+3, b.y+2); ctx.lineTo(b.x+xe, b.y+14); ctx.closePath(); ctx.fill();
+      } else {
+        ctx.fillRect(b.x-xe-3, b.y+2, 6, 12);
+        ctx.fillRect(b.x+xe-3, b.y+2, 6, 12);
+      }
+      // label
+      ctx.fillStyle = "#8A8A95"; ctx.font = "bold 20px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("呜…", b.x, b.y - BLOB_R - 12);
+      ctx.restore();
+      return;
+    }
+    const isActive = (phase === "aim" && b.owner === active);
+    const heavy = energy[b.owner] >= ENERGY_MAX;
+    if(isActive){
+      const pr = BLOB_R + 8 + Math.sin(pulse)*4;
+      ctx.strokeStyle = heavy ? sk.heavy : sk.active; ctx.lineWidth = 3; ctx.setLineDash([5,6]);
+      if(skin === "cute"){ ctx.beginPath(); ctx.arc(b.x, b.y, pr, 0, Math.PI*2); ctx.stroke(); }
+      else { ctx.strokeRect(b.x - pr, b.y - pr, pr*2, pr*2); }
+      ctx.setLineDash([]);
+    }
+    if(skin === "cute"){
+      ctx.fillStyle = col.fill;
+      ctx.beginPath(); ctx.arc(b.x, b.y, BLOB_R, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = col.eye;
+      ctx.beginPath(); ctx.arc(b.x-15, b.y-8, 8, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(b.x+15, b.y-8, 8, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = col.pup;
+      ctx.beginPath(); ctx.arc(b.x-13, b.y-7, 4, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(b.x+17, b.y-7, 4, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = col.pup; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(b.x, b.y+6, 12, 0.15*Math.PI, 0.85*Math.PI); ctx.stroke();
+    } else {
+      const r = BLOB_R;
+      ctx.fillStyle = col.fill;
+      ctx.fillRect(b.x-r, b.y-r, r*2, r*2);
+      ctx.fillStyle = col.eye;
+      ctx.fillRect(b.x-18, b.y-14, 12, 12);
+      ctx.fillRect(b.x+6, b.y-14, 12, 12);
+      ctx.fillStyle = col.pup;
+      ctx.fillRect(b.x-14, b.y-10, 6, 6);
+      ctx.fillRect(b.x+10, b.y-10, 6, 6);
+      ctx.fillRect(b.x-12, b.y+10, 24, 5);
+    }
+  }
+
+  function drawEnergy(b, sk){
+    if(!b.alive) return;
+    const w = 72, h = 8, x = b.x - w/2, y = b.y + BLOB_R + 12;
+    ctx.fillStyle = "rgba(0,0,0,0.15)"; ctx.fillRect(x, y, w, h);
+    const e = energy[b.owner] / ENERGY_MAX;
+    ctx.fillStyle = energy[b.owner] >= ENERGY_MAX ? sk.heavy : sk.energy;
+    ctx.fillRect(x, y, w * e, h);
+    if(energy[b.owner] >= ENERGY_MAX){
+      ctx.fillStyle = sk.heavy; ctx.font = "bold 16px sans-serif"; ctx.textAlign = "center";
+      ctx.fillText("重击就绪", b.x, y - 6);
+    }
+  }
+
+  // ---------- HUD ----------
+  const el = (id)=>document.getElementById(id);
+  function updateHUD(){
+    el("s1").textContent = scores[0];
+    el("s2").textContent = scores[1];
+    el("round").textContent = round;
+    el("mode").textContent = mode.label;
+    el("p2l").textContent = mode.p2;
+    let t;
+    if(phase === "matchover") t = "对局结束";
+    else if(!twoPlayer && active === 1) t = "AI 思考中…";
+    else t = (twoPlayer ? (active===0?"P1 回合":"P2 回合") : "你的回合");
+    el("turn").textContent = t;
+    el("skinBtn").textContent = skin === "cute" ? "可爱" : "方块";
+  }
+  function showOverlay(title, sub){
+    el("overTitle").textContent = title;
+    el("overSub").textContent = sub;
+    el("over").classList.add("show");
+  }
+  function hideOverlay(){ el("over").classList.remove("show"); }
+
+  // ---------- controls ----------
+  el("lobbyBtn").addEventListener("click", () => { window.location.href = "../index.html"; });
+  el("modeBtn").addEventListener("click", () => {
+    twoPlayer = !twoPlayer;
+    mode = twoPlayer ? { label:"2P", p2:"P2" } : { label:"1P", p2:"AI" };
+    startMatch();
+  });
+  el("skinBtn").addEventListener("click", () => {
+    skin = skin === "cute" ? "block" : "cute";
+    document.body.classList.toggle("block", skin === "block");
+    updateHUD();
+  });
+  el("resetBtn").addEventListener("click", startMatch);
+  el("overBtn").addEventListener("click", () => {
+    hideOverlay();
+    el("startScreen").classList.add("show");
+  });
+
+  // ---------- start / settings screen ----------
+  let pendingTwoPlayer = false;
+  let pendingSkin = "cute";
+  document.querySelectorAll('#startScreen [data-mode]').forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll('#startScreen [data-mode]').forEach((b) => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      pendingTwoPlayer = btn.dataset.mode === "2p";
+    });
+  });
+  document.querySelectorAll('#startScreen [data-skin]').forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.querySelectorAll('#startScreen [data-skin]').forEach((b) => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      pendingSkin = btn.dataset.skin;
+    });
+  });
+  el("ssStart").addEventListener("click", () => {
+    twoPlayer = pendingTwoPlayer;
+    mode = twoPlayer ? { label:"2P", p2:"P2" } : { label:"1P", p2:"AI" };
+    skin = pendingSkin;
+    document.body.classList.toggle("block", skin === "block");
+    el("startScreen").classList.remove("show");
+    const a0 = audio(); if(a0 && a0.state === "suspended") a0.resume();  // unlock audio on user gesture
+    startMatch();
+  });
+  el("ssRules").addEventListener("click", () => el("ssRulesModal").classList.add("show"));
+  el("ssRulesClose").addEventListener("click", () => el("ssRulesModal").classList.remove("show"));
+  el("ssLobby").addEventListener("click", () => { window.location.href = "../index.html"; });
+
+  // ---------- loop ----------
+  function frame(){ step(); draw(); requestAnimationFrame(frame); }
+  resize(); startMatch(); requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
