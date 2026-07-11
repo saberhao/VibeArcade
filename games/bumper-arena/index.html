@@ -160,8 +160,6 @@
     <div class="score p2"><div class="n" id="s2">0</div><div class="l" id="p2l">AI</div></div>
     <div class="ctrls">
       <button class="tb" id="lobbyBtn" title="返回大厅">大厅</button>
-      <button class="tb" id="modeBtn" title="切换单人/双人">1P/2P</button>
-      <button class="tb" id="skinBtn" title="切换美术风格">可爱</button>
       <button class="tb" id="resetBtn" title="重开">重开</button>
     </div>
   </div>
@@ -1013,7 +1011,6 @@
     else if(!twoPlayer && active === 1) t = "AI 思考中…";
     else t = (twoPlayer ? (active===0?"P1 回合":"P2 回合") : "你的回合");
     el("turn").textContent = t;
-    el("skinBtn").textContent = skin === "cute" ? "可爱" : "方块";
   }
   function showOverlay(title, sub){
     el("overTitle").textContent = title;
@@ -1024,16 +1021,6 @@
 
   // ---------- controls ----------
   el("lobbyBtn").addEventListener("click", () => { window.location.href = "../index.html"; });
-  el("modeBtn").addEventListener("click", () => {
-    twoPlayer = !twoPlayer;
-    mode = twoPlayer ? { label:"2P", p2:"P2" } : { label:"1P", p2:"AI" };
-    startMatch();
-  });
-  el("skinBtn").addEventListener("click", () => {
-    skin = skin === "cute" ? "block" : "cute";
-    document.body.classList.toggle("block", skin === "block");
-    updateHUD();
-  });
   el("resetBtn").addEventListener("click", startMatch);
   el("overBtn").addEventListener("click", () => {
     hideOverlay();
